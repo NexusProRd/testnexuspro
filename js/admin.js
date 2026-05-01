@@ -269,42 +269,60 @@ window.onload = async () => {
     
     var FALLBACK_URL = "https://script.google.com/macros/s/AKfycbwr3K5qcSQvmEb1qhoeM0L9E26k1nSHTjmBdoehu3vRcssLltMInwM4AaWw34ZOuKEF/exec";
     
-    var params = new URLSearchParams(window.location.search);
-    var identifier = params.get('s') || "";
-    
-    // Si no hay identifier, intentar obtener de localStorage
-    if (!identifier) {
-        identifier = localStorage.getItem('nexus_shopId') || sessionStorage.getItem('shopId');
+    // Esperar a que config.js termine su init
+    var intentos = 0;
+    while (intentos < 50) {
+        if (NEXUS_CONFIG && NEXUS_CONFIG.isReady && NEXUS_CONFIG.shopId) {
+            break;
+        }
+        await new Promise(r => setTimeout(r, 100));
+        intentos++;
     }
     
-    if (typeof NEXUS_CONFIG === 'undefined') {
-        window.NEXUS_CONFIG = {};
-    }
-    
-    // Crear método call inline
-    NEXUS_CONFIG.call = async function(action, data = {}) {
-        var url = this.API_URL || FALLBACK_URL;
-        var payload = { shopId: this.shopId || identifier, action: action, ...data };
+    // Si no se inicializó, usar fallback manual
+    if (!NEXUS_CONFIG || !NEXUS_CONFIG.isReady) {
+        var params = new URLSearchParams(window.location.search);
+        var identifier = params.get('s') || "";
         
-        var response = await fetch(url, {
-            method: "POST",
-            body: JSON.stringify(payload),
-            redirect: "follow"
-        });
-        return JSON.parse(await response.text());
-    };
+        if (typeof NEXUS_CONFIG === 'undefined') {
+            window.NEXUS_CONFIG = {};
+        }
+        
+        // Buscar en mapeo local
+        var key = identifier.toLowerCase().trim();
+        if (typeof SHOP_MAPPING !== 'undefined' && SHOP_MAPPING[key]) {
+            identifier = SHOP_MAPPING[key];
+        }
+        
+        NEXUS_CONFIG.shopId = identifier;
+        NEXUS_CONFIG.pccShopId = identifier;
+        NEXUS_CONFIG.API_URL = FALLBACK_URL;
+        NEXUS_CONFIG.isReady = true;
+    }
     
-    // Forzar propiedades
-    NEXUS_CONFIG.shopId = identifier;
-    NEXUS_CONFIG.pccShopId = identifier;
-    NEXUS_CONFIG.API_URL = FALLBACK_URL;
-    NEXUS_CONFIG.isReady = true;
-    NEXUS_CONFIG.getShopId = function() { return this.shopId; };
+    // Asegurar método call
+    if (!NEXUS_CONFIG.call) {
+        NEXUS_CONFIG.call = async function(action, data = {}) {
+            var url = this.API_URL || FALLBACK_URL;
+            var payload = { shopId: this.shopId, action: action, ...data };
+            
+            var response = await fetch(url, {
+                method: "POST",
+                body: JSON.stringify(payload),
+                redirect: "follow"
+            });
+            return JSON.parse(await response.text());
+        };
+    }
+    
+    if (!NEXUS_CONFIG.getShopId) {
+        NEXUS_CONFIG.getShopId = function() { return this.shopId; };
+    }
     
     var loginSubtitle = document.getElementById('loginSubtitle');
     if (loginSubtitle) loginSubtitle.innerHTML = '<span class="loader"></span> Conectando...';
     
-    var shopId = identifier;
+    var shopId = NEXUS_CONFIG.getShopId();
     
     
     if (shopId) {
