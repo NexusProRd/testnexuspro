@@ -424,7 +424,32 @@ function logout(msg = null) {
 // INIT TRAS LOGIN EXITOSO
 // ==========================================
 function initPreloaded() {
+    if (!appData || !appData.config) {
+        console.log(">>> initPreloaded: No hay appData, solicitando...");
+        NexusCore.ejecutar('getInitData').then(function(res) {
+            if (res.success) {
+                appData = res;
+                dbConfig = res.config || {};
+                dbProductos = res.productos || [];
+                dbCupones = res.cupones || [];
+                cargarPanel();
+            }
+        });
+        return;
+    }
+    cargarPanel();
+}
 
+function cargarPanel() {
+    poblarDashboard();
+    if (typeof calcularInventario === 'function') calcularInventario();
+    if (typeof renderizarProductosAdmin === 'function') renderizarProductosAdmin();
+    if (typeof renderizarCupones === 'function') renderizarCupones();
+    
+    var loginSection = document.getElementById('loginSection');
+    var adminContent = document.getElementById('adminContent');
+    if (loginSection) loginSection.style.display = 'none';
+    if (adminContent) adminContent.style.display = 'block';
 }
 
 // ==========================================
