@@ -3,50 +3,6 @@
 // OPTIMIZADO Y MODERNO
 // ==========================================
 
-// Inicialización forzada para tienda
-(function() {
-    var FALLBACK_URL = "https://script.google.com/macros/s/AKfycbwr3K5qcSQvmEb1qhoeM0L9E26k1nSHTjmBdoehu3vRcssLltMInwM4AaWw34ZOuKEF/exec";
-    
-    var params = new URLSearchParams(window.location.search);
-    var identifier = params.get('s') || "";
-    
-    if (typeof NEXUS_CONFIG === 'undefined') {
-        window.NEXUS_CONFIG = {};
-    }
-    
-    // Resolver el Sheet ID desde el nombre
-    var resolvedShopId = identifier;
-    if (identifier && identifier.length < 30) {
-        var key = identifier.toLowerCase().trim();
-        if (typeof SHOP_MAPPING !== 'undefined' && SHOP_MAPPING[key]) {
-            resolvedShopId = SHOP_MAPPING[key];
-        }
-    }
-    
-    NEXUS_CONFIG.shopId = resolvedShopId;
-    NEXUS_CONFIG.pccShopId = identifier;
-    NEXUS_CONFIG.API_URL = FALLBACK_URL;
-    NEXUS_CONFIG.isReady = true;
-    
-    if (!NEXUS_CONFIG.getShopId) {
-        NEXUS_CONFIG.getShopId = function() { return this.shopId; };
-    }
-    
-    if (!NEXUS_CONFIG.call) {
-        NEXUS_CONFIG.call = async function(action, data = {}) {
-            var url = this.API_URL || FALLBACK_URL;
-            var payload = { shopId: this.shopId, action: action, ...data };
-            
-            var response = await fetch(url, {
-                method: "POST",
-                body: JSON.stringify(payload),
-                redirect: "follow"
-            });
-            return JSON.parse(await response.text());
-        };
-    }
-})();
-
 // PWA
 let deferredPrompt;
 window.addEventListener('beforeinstallprompt', e => {
@@ -133,11 +89,6 @@ function setCacheData(key, value) {
 
 // Cargar Tienda
 async function cargarTienda() {
-    // Verificar si el sistema está bloqueado
-    if (NEXUS_CONFIG.isSuspended) {
-        return;
-    }
-    
     // Esperar a que NEXUS_CONFIG esté listo
     let intentos = 0;
     while (!NEXUS_CONFIG.isReady && intentos < 50) {
@@ -146,28 +97,16 @@ async function cargarTienda() {
     }
     
     if (!NEXUS_CONFIG.isReady) {
-        var maintenanceEl = document.getElementById("maintenanceScreen");
-        if (maintenanceEl) maintenanceEl.style.display = 'flex';
+        document.getElementById("maintenanceScreen").style.display = 'flex';
         return;
     }
     
-    var gridEl = document.getElementById("mainGrid");
-    if (gridEl) {
-        gridEl.innerHTML = Array(6).fill().map(function() {
-            return '<div class="skeleton-card"><div class="skeleton skeleton-img"></div><div class="skeleton-body"><div class="skeleton skeleton-title"></div><div class="skeleton skeleton-price"></div></div></div>';
-        }).join('');
-    }
-    
+    showSkeletonLoader();
     try {
         const res = await NexusCore.ejecutar('getInitData');
-        
-        if (res.message === 'ACCESO_DENEGADO' || res.message === 'Tienda inactiva') {
-            return;
-        }
-        
-        if (res.success && res.config && res.config.Nombre_Tienda) {
+        if (res.success && res.config?.Nombre_Tienda) {
             dbConfig = res.config;
-            dbProductos = res.productos.filter(function(p) { return p.estado === "Publicado"; });
+            dbProductos = res.productos.filter(p => p.estado === "Publicado");
             dbCupones = res.cupones || [];
             setCacheData('nx_config', dbConfig);
             setCacheData('nx_productos', dbProductos);
@@ -182,7 +121,7 @@ async function cargarTienda() {
             initDarkMode();
             return;
         }
-    } catch (e) { }
+    } catch (e) { console.error(e); }
 
     const cachedConfig = getCacheData('nx_config');
     const cachedProds = getCacheData('nx_productos');
@@ -198,36 +137,31 @@ async function cargarTienda() {
         filtrarBusqueda();
         actualizarCarritoUI();
     } else {
-        var maintenanceEl = document.getElementById("maintenanceScreen");
-        if (maintenanceEl) maintenanceEl.style.display = 'flex';
+        document.getElementById("maintenanceScreen").style.display = 'flex';
     }
 }
 
 function aplicarConfigTienda() {
-    var nombre = localStorage.getItem('nx_shop_name') || (dbConfig && dbConfig.Nombre_Tienda) || "Nexus Pro";
-    var eslogan = localStorage.getItem('nx_shop_eslogan') || (dbConfig && dbConfig.Eslogan) || "Bienvenido";
-    var color = localStorage.getItem('nx_primary_color') || (dbConfig && dbConfig.Color_Primario) || "#10b981";
-    var sobre = localStorage.getItem('nx_shop_sobre') || (dbConfig && dbConfig.Sobre_Nosotros) || "";
+    var nombre = localStorage.getItem('nx_shop_name') || dbConfig.Nombre_Tienda || "Nexus Pro";
+    var eslogan = localStorage.getItem('nx_shop_eslogan') || dbConfig.Eslogan || "Bienvenido";
+    var color = localStorage.getItem('nx_primary_color') || dbConfig.Color_Primario || "#10b981";
+    var sobre = localStorage.getItem('nx_shop_sobre') || dbConfig.Sobre_Nosotros || "";
+    var cats = localStorage.getItem('nx_shop_categorias') || dbConfig.Categorias_Lista || "";
+    var wa = localStorage.getItem('nx_shop_wa') || dbConfig.WhatsApp || "";
 
-    var headerLogo = document.getElementById("headerLogo");
-    var headerSlogan = document.getElementById("headerSlogan");
-    if (headerLogo) headerLogo.innerText = nombre;
-    if (headerSlogan) headerSlogan.innerText = eslogan;
-    if (document.title) document.title = nombre + " - Catálogo";
+    document.getElementById("headerLogo").innerText = nombre;
+    document.getElementById("headerSlogan").innerText = eslogan;
+    document.title = nombre + " - Catálogo";
     
     if (sobre) {
-        var aboutText = document.getElementById("aboutText");
-        var aboutContainer = document.getElementById("aboutContainer");
-        if (aboutText) aboutText.innerText = sobre;
-        if (aboutContainer) aboutContainer.style.display = 'block';
+        document.getElementById("aboutText").innerText = sobre;
+        document.getElementById("aboutContainer").style.display = 'block';
     }
     if (color) {
         document.documentElement.style.setProperty('--primary', color);
     }
-    if (dbConfig) {
-        dbConfig.WhatsApp = localStorage.getItem('nx_shop_wa') || dbConfig.WhatsApp || "";
-        dbConfig.Categorias_Lista = localStorage.getItem('nx_shop_categorias') || dbConfig.Categorias_Lista || "";
-    }
+    dbConfig.WhatsApp = wa;
+    dbConfig.Categorias_Lista = cats;
 }
 
 // Skeleton
@@ -576,7 +510,7 @@ async function applyCoupon() {
             
             try {
                 await NexusCore.ejecutar('deleteCoupon', { id: cupon.id });
-            } catch (e) { }
+            } catch (e) { console.log("Error:", e); }
             
             if (cupon.mensaje_sorpresa) {
                 document.getElementById("surpriseTitle").innerText = "💌 ¡TIENES UN MENSAJE!";

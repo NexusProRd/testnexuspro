@@ -3,20 +3,6 @@
 // ==========================================
 
 // ==========================================
-// UTILIDADES DE SEGURIDAD
-// ==========================================
-function $(id) { return document.getElementById(id); }
-function $set(id, prop, val) { var el = document.getElementById(id); if (el) el[prop] = val; }
-function $show(id, show) { var el = document.getElementById(id); if (el) el.style.display = show ? 'block' : 'none'; }
-function $text(id, txt) { var el = document.getElementById(id); if (el) el.innerText = txt; }
-function $html(id, html) { var el = document.getElementById(id); if (el) el.innerHTML = html; }
-function $val(id, v) { var el = document.getElementById(id); if (el) el.value = v; }
-function $class(id, cls, add) { var el = document.getElementById(id); if (el) add ? el.classList.add(cls) : el.classList.remove(cls); }
-function $addClass(id, cls) { var el = document.getElementById(id); if (el) el.classList.add(cls); }
-function $removeClass(id, cls) { var el = document.getElementById(id); if (el) el.classList.remove(cls); }
-function $toggleClass(id, cls, cond) { var el = document.getElementById(id); if (el) el.classList.toggle(cls, cond); }
-
-// ==========================================
 // NOTIFICACIONES NATIVAS DEL NAVEGADOR
 // ==========================================
 async function requestNotificationPermission() {
@@ -141,34 +127,16 @@ const NexusDialog = {
 
     show: function(type, msg, title = "Atención") {
         return new Promise((resolve) => {
-            const titleEl = document.getElementById('dialogTitle');
-            const msgEl = document.getElementById('dialogMsg');
-            const modalEl = document.getElementById('modalDialog');
-            
-            if (!titleEl || !msgEl || !modalEl) {
-                alert(title + ": " + msg);
-                resolve();
-                return;
-            }
-            
-            titleEl.innerText = title;
-            msgEl.innerText = msg;
-            
+            document.getElementById('dialogTitle').innerText = title;
+            document.getElementById('dialogMsg').innerText = msg;
             const inputEl = document.getElementById('dialogInput');
             const btnCancel = document.getElementById('btnDialogCancel');
-            
-            if (inputEl) {
-                inputEl.value = "";
-                inputEl.style.display = (type === 'prompt') ? 'block' : 'none';
-            }
-            if (btnCancel) {
-                btnCancel.style.display = (type === 'alert') ? 'none' : 'block';
-            }
-            
-            modalEl.classList.remove('hidden');
-            modalEl.classList.add('flex');
-            
-            if (type === 'prompt' && inputEl) setTimeout(() => inputEl.focus(), 100);
+            inputEl.value = "";
+            inputEl.style.display = (type === 'prompt') ? 'block' : 'none';
+            btnCancel.style.display = (type === 'alert') ? 'none' : 'block';
+            document.getElementById('modalDialog').classList.remove('hidden');
+            document.getElementById('modalDialog').classList.add('flex');
+            if (type === 'prompt') setTimeout(() => inputEl.focus(), 100);
             this.resolvePromise = resolve;
         });
     },
@@ -250,7 +218,7 @@ function getBlockTimeRemaining() {
 // LOADING OVERLAY
 // ==========================================
 function showLoading(text = "Procesando...") {
-    $text('loadingText', text);
+    document.getElementById('loadingText').innerText = text;
     document.getElementById('loadingOverlay').classList.add('open');
 }
 
@@ -280,61 +248,32 @@ window.addEventListener('touchstart', resetInactivityTimer);
 // INICIALIZACIÓN
 // ==========================================
 window.onload = async () => {
+    console.log("Nexus init...");
     
-    var FALLBACK_URL = "https://script.google.com/macros/s/AKfycbwr3K5qcSQvmEb1qhoeM0L9E26k1nSHTjmBdoehu3vRcssLltMInwM4AaWw34ZOuKEF/exec";
-    
-    var params = new URLSearchParams(window.location.search);
-    var identifier = params.get('s') || "";
-    
-    // Crear NEXUS_CONFIG desde cero con el mapeo
-    if (typeof NEXUS_CONFIG === 'undefined') {
-        window.NEXUS_CONFIG = {};
+    // Esperar a que NEXUS_CONFIG esté listo
+    let intentos = 0;
+    while (!NEXUS_CONFIG.isReady && intentos < 50) {
+        await new Promise(r => setTimeout(r, 100));
+        intentos++;
     }
     
-    // Resolver el Sheet ID desde el nombre
-    var resolvedShopId = identifier;
-    if (identifier && identifier.length < 30) {
-        var key = identifier.toLowerCase().trim();
-        if (typeof SHOP_MAPPING !== 'undefined' && SHOP_MAPPING[key]) {
-            resolvedShopId = SHOP_MAPPING[key];
-        }
+    if (!NEXUS_CONFIG.isReady) {
+        document.getElementById('loginSubtitle').innerText = "ERROR DE CONEXIÓN";
+        NexusDialog.alert("No se pudo conectar con el servidor.", "Error");
+        return;
     }
-    
-    // Configurar todo
-    NEXUS_CONFIG.shopId = resolvedShopId;
-    NEXUS_CONFIG.pccShopId = identifier;
-    NEXUS_CONFIG.API_URL = FALLBACK_URL;
-    NEXUS_CONFIG.isReady = true;
-    NEXUS_CONFIG.getShopId = function() { return this.shopId; };
-    
-    NEXUS_CONFIG.call = async function(action, data = {}) {
-        var url = this.API_URL || FALLBACK_URL;
-        var payload = { shopId: this.shopId, action: action, ...data };
-        
-        var response = await fetch(url, {
-            method: "POST",
-            body: JSON.stringify(payload),
-            redirect: "follow"
-        });
-        return JSON.parse(await response.text());
-    };
-    
-    var loginSubtitle = document.getElementById('loginSubtitle');
-    if (loginSubtitle) loginSubtitle.innerHTML = '<span class="loader"></span> Conectando...';
     
     var shopId = NEXUS_CONFIG.getShopId();
-    
+    console.log("Shop ID:", shopId);
     
     if (shopId) {
-        var pinContainer = document.getElementById('pinContainer');
-        var loginSubtitle = document.getElementById('loginSubtitle');
-        if (pinContainer) pinContainer.style.display = 'none';
-        if (loginSubtitle) loginSubtitle.innerHTML = '<span class="loader"></span> Sincronizando Motor...';
+        document.getElementById('pinContainer').style.display = 'none';
+        document.getElementById('loginSubtitle').innerHTML = '<span class="loader"></span> Sincronizando Motor...';
 
         try {
-            
+            console.log("Calling getInitData...");
             var res = await NexusCore.ejecutar('getInitData');
-            
+            console.log("Response:", res);
             
             if (res.success) {
                 appData = res;
@@ -346,20 +285,14 @@ window.onload = async () => {
                     return;
                 }
 
-                var loginSubtitle = document.getElementById('loginSubtitle');
-                if (loginSubtitle) loginSubtitle.innerText = "SISTEMA LISTO";
-                
+                document.getElementById('loginSubtitle').innerText = "SISTEMA LISTO";
                 var pinContainer = document.getElementById("pinContainer");
-                if (pinContainer) {
-                    pinContainer.style.display = "block";
-                    pinContainer.classList.add("animate-scale-in");
-                }
+                pinContainer.style.display = "block";
+                pinContainer.classList.add("animate-scale-in");
                 var input = document.getElementById("pinInput");
-                if (input) {
-                    input.disabled = false;
-                    input.classList.remove('opacity-50');
-                    input.focus();
-                }
+                input.disabled = false;
+                input.classList.remove('opacity-50');
+                input.focus();
 
                 if (localStorage.getItem("nx_session") === "valid") {
                     initPreloaded();
@@ -368,9 +301,9 @@ window.onload = async () => {
                 throw new Error(res.message || "ID Inválido");
             }
         } catch(e) {
+            console.error("Init error:", e);
             NexusDialog.alert("Error: " + e.message, "Error");
-            var loginSubtitle = document.getElementById('loginSubtitle');
-            if (loginSubtitle) loginSubtitle.innerText = "ERROR DE CONEXIÓN";
+            document.getElementById('loginSubtitle').innerText = "ERROR DE CONEXIÓN";
         }
     } else {
         NexusDialog.alert("No se encontró el ID en config.js", "Error");
@@ -438,32 +371,30 @@ function logout(msg = null) {
 // INIT TRAS LOGIN EXITOSO
 // ==========================================
 function initPreloaded() {
-    if (!appData || !appData.config) {
-        console.log(">>> initPreloaded: No hay appData, solicitando...");
-        NexusCore.ejecutar('getInitData').then(function(res) {
-            if (res.success) {
-                appData = res;
-                dbConfig = res.config || {};
-                dbProductos = res.productos || [];
-                dbCupones = res.cupones || [];
-                cargarPanel();
-            }
-        });
-        return;
-    }
-    cargarPanel();
-}
-
-function cargarPanel() {
-    poblarDashboard();
-    if (typeof calcularInventario === 'function') calcularInventario();
-    if (typeof renderizarProductosAdmin === 'function') renderizarProductosAdmin();
-    if (typeof renderizarCupones === 'function') renderizarCupones();
+    console.log("🚀 initPreloadedStart");
+    console.log("📦 appData:", appData);
+    console.log("📦 productos:", appData.productos);
+    console.log("📦 cupones:", appData.cupones);
     
-    var loginSection = document.getElementById('loginSection');
-    var adminContent = document.getElementById('adminContent');
-    if (loginSection) loginSection.style.display = 'none';
-    if (adminContent) adminContent.style.display = 'block';
+    document.getElementById("loginSection").style.display = "none";
+    document.getElementById("adminContent").style.display = "block";
+
+    poblarDashboard();
+    renderProductos();
+    renderCupones();
+    console.log("📊 appData.pedidos:", appData.pedidos);
+    console.log("📊 appData.productos:", appData.productos);
+    switchTab('analytics');
+    loadAnalyticsData('semana');
+    resetInactivityTimer();
+    checkMaintenanceStatus();
+    loadNotificationSettings();
+    loadSettingsInModal();
+    requestNotificationPermission();
+
+    pollingInterval = setInterval(syncOrdersSilently, 10000);
+    
+    console.log("✅ initPreloadedDone");
 }
 
 // ==========================================
@@ -536,12 +467,12 @@ function formatRD(num) {
 function renderizarResumenInventario() {
     var data = calcularInventario();
 
-    $text('invTotalProductos', data.totalProductos);
-    $text('invStockTotal', data.stockTotal);
-    $text('invInversion', "RD$ " + formatRD(data.inversion));
-    $text('invGanancia', "RD$ " + formatRD(data.gananciaPotencial));
-    $text('invValor', "RD$ " + formatRD(data.valorInventario));
-    $text('invAgotados', data.agotados);
+    document.getElementById('invTotalProductos').innerText = data.totalProductos;
+    document.getElementById('invStockTotal').innerText = data.stockTotal;
+    document.getElementById('invInversion').innerText = "RD$ " + formatRD(data.inversion);
+    document.getElementById('invGanancia').innerText = "RD$ " + formatRD(data.gananciaPotencial);
+    document.getElementById('invValor').innerText = "RD$ " + formatRD(data.valorInventario);
+    document.getElementById('invAgotados').innerText = data.agotados;
 }
 
 // ==========================================
@@ -568,7 +499,8 @@ function getProductTags(p) {
     return tags;
 }
 function renderProductos() {
-
+    console.log("🎨 renderProductos start");
+    console.log("🎨 appData.productos:", appData.productos);
     
     renderizarResumenInventario();
 
@@ -606,7 +538,28 @@ function renderProductos() {
 }
 
 function applyFilters() {
+    console.log("🔍 applyFilters start");
+    console.log("🔍 appData.productos:", appData.productos);
+    console.log("🔍 appData length:", appData.productos ? appData.productos.length : 0);
+    
+    var search = document.getElementById("searchInput").value.toLowerCase();
+    var cat = document.getElementById("categoryFilter").value;
+    var status = document.getElementById("statusFilter").value;
 
+    var lista = [];
+    if (appData.productos) {
+        for (var i = 0; i < appData.productos.length; i++) {
+            var p = appData.productos[i];
+            var matchSearch = p.nombre.toLowerCase().indexOf(search) > -1;
+            var matchCat = cat === "Todas" || p.categoria === cat;
+            var matchStatus = status === "Todos" || p.estado === status;
+            if (matchSearch && matchCat && matchStatus) {
+                lista.push(p);
+            }
+        }
+    }
+    
+    console.log("🔍 filtered lista:", lista);
 
     var container = document.getElementById("listaProductos");
 
@@ -647,7 +600,7 @@ function applyFilters() {
 }
     container.innerHTML = html;
     
-    
+    console.log("🔍 renderedHTML length:", html.length);
 }
 
 // ==========================================
@@ -792,7 +745,7 @@ async function guardarEdicionProducto() {
             renderProductos();
         }
         closeEditModal();
-        $text("successMessage", "Producto actualizado.");
+        document.getElementById("successMessage").innerText = "Producto actualizado.";
         toggleModal("modalSuccess", true);
     } else {
         NexusDialog.alert(res.message || "Error al guardar.", "Error");
@@ -828,10 +781,8 @@ async function guardarProducto() {
     }
 
     const btn = document.getElementById("btnSaveProduct");
-    if (btn) {
-        btn.innerText = "Guardando...";
-        btn.disabled = true;
-    }
+    btn.innerText = "Guardando...";
+    btn.disabled = true;
 
     let imagen = document.getElementById("preview").src;
     if (file) {
@@ -863,16 +814,14 @@ async function guardarProducto() {
             renderProductos();
         }
         toggleModal("modalProduct", false);
-        $text("successMessage", id ? "Producto actualizado." : "Producto agregado.");
+        document.getElementById("successMessage").innerText = id ? "Producto actualizado." : "Producto agregado.";
         toggleModal("modalSuccess", true);
     } else {
         NexusDialog.alert(res.message || "Error al guardar.", "Error");
     }
 
-    if (btn) {
-        btn.innerText = "Guardar Producto";
-        btn.disabled = false;
-    }
+    btn.innerText = "Guardar Producto";
+    btn.disabled = false;
 }
 
 // ==========================================
@@ -890,7 +839,7 @@ async function eliminarProducto(id) {
             poblarDashboard();
             renderProductos();
         }
-        $text("successMessage", "Producto eliminado.");
+        document.getElementById("successMessage").innerText = "Producto eliminado.";
         toggleModal("modalSuccess", true);
     } else {
         NexusDialog.alert(res.message || "Error al eliminar.", "Error");
@@ -926,7 +875,7 @@ async function duplicarProducto(id) {
             appData = refreshData;
             renderProductos();
         }
-        $text("successMessage", "Producto duplicado.");
+        document.getElementById("successMessage").innerText = "Producto duplicado.";
         toggleModal("modalSuccess", true);
     }
 
@@ -1022,7 +971,7 @@ function openCouponModal() {
 }
 
 function setCouponType(type) {
-    
+    console.log("Cambiando tipo a:", type);
     
     // 1. Cambiar el valor oculto
     var couponTypeInput = document.getElementById("couponType");
@@ -1194,7 +1143,7 @@ async function guardarCupón() {
                 renderCupones();
             }
             toggleModal("modalCoupon", false);
-            $text("successMessage", "Cupón Regalo Único creado.");
+            document.getElementById("successMessage").innerText = "Cupón Regalo Único creado.";
             toggleModal("modalSuccess", true);
         } else {
             NexusDialog.alert(res.message || "Error al crear cupón.", "Error");
@@ -1232,7 +1181,7 @@ async function guardarCupón() {
             renderCupones();
         }
         toggleModal("modalCoupon", false);
-        $text("successMessage", "Cupón creado exitosamente.");
+        document.getElementById("successMessage").innerText = "Cupón creado exitosamente.";
         toggleModal("modalSuccess", true);
     } else {
         NexusDialog.alert(res.message || "Error al crear cupón.", "Error");
@@ -1269,7 +1218,7 @@ async function eliminarCupon(id) {
             appData = refreshData;
             renderCupones();
         }
-        $text("successMessage", "Cupón eliminado.");
+        document.getElementById("successMessage").innerText = "Cupón eliminado.";
         toggleModal("modalSuccess", true);
     }
 }
@@ -1366,7 +1315,7 @@ async function updateStatus(orderId, nuevoEstado) {
     hideLoading();
 
     if (res.success) {
-        $text("successMessage", `Orden ${nuevoEstado}.`);
+        document.getElementById("successMessage").innerText = `Orden ${nuevoEstado}.`;
         toggleModal("modalSuccess", true);
 
         // 🔄 REFRESCAR TODOS LOS DATOS: pedidos + productos (stock actualizado)
@@ -1418,7 +1367,7 @@ async function syncOrdersSilently() {
             appData.pedidos = res.pedidos;
             if (currentTab === 'pedidos') renderPedidos();
         }
-    } catch (e) { }
+    } catch (e) { console.error("Error en sincronización silenciosa", e); }
 }
 
 function showOrderNotification(order) {
@@ -1473,7 +1422,7 @@ async function handleNotifAction(nuevoEstado) {
     hideLoading();
 
     if (res.success) {
-        $text("successMessage", `Orden #${currentNotifId} ${nuevoEstado === 'Confirmado' ? 'APROBADA' : 'RECHAZADA'}.`);
+        document.getElementById("successMessage").innerText = `Orden #${currentNotifId} ${nuevoEstado === 'Confirmado' ? 'APROBADA' : 'RECHAZADA'}.`;
         toggleModal("modalSuccess", true);
 
         // 🔄 REFRESCAR TODOS LOS DATOS: pedidos + productos (stock actualizado)
@@ -1497,7 +1446,7 @@ async function handleNotifAction(nuevoEstado) {
 function switchTab(tab) {
     try {
         currentTab = tab;
-        
+        console.log("C tab:", tab);
 
         document.getElementById("view-productos").classList.add("hidden");
         document.getElementById("view-pedidos").classList.add("hidden");
@@ -1526,7 +1475,7 @@ function switchTab(tab) {
         if (viewEl) {
             viewEl.classList.remove("hidden");
         } else {
-            
+            console.log("⚠️ No view found: view-" + tab);
         }
         
         // Activate selected button (sidebar)
@@ -1558,7 +1507,7 @@ function switchTab(tab) {
         if (tab === 'analytics') {
             // Force mostrar analytics
             document.getElementById('view-analytics').classList.remove('hidden');
-            
+            console.log("📊 Force showing analytics");
             loadAnalyticsData('semana');
         }
 
@@ -1570,9 +1519,9 @@ function switchTab(tab) {
             renderCupones();
         }
         
-        
+        console.log("C tab done:", tab);
     } catch(e) {
-        
+        console.error("❌ switchTab error:", e);
         alert("Error: " + e.message);
     }
 }
@@ -1623,17 +1572,17 @@ function loadAnalyticsData(filter) {
     if (btnAnio) btnAnio.className = filter === 'anio' ? 'flex-1 bg-slate-900 text-white py-2 px-3 rounded-xl text-[10px] font-black uppercase' : 'flex-1 bg-slate-200 text-slate-600 py-2 px-3 rounded-xl text-[10px] font-black uppercase';
     
     // Llamar API de analytics con período
-    
+    console.log("📊 Loading analytics for:", filter);
     NexusCore.ejecutar('getAnalytics', { periodo: filter }).then(function(res) {
-        
+        console.log("📊 Analytics response:", res);
         if (res && res.success && res.analytics) {
             renderAnalyticsData(res.analytics);
         } else {
-            
+            console.log("📊 Using fallback data");
             renderAnalytics();
         }
     })["catch"](function(e) {
-        
+        console.error("📊 Analytics error:", e);
         renderAnalytics();
     });
 }
@@ -1642,7 +1591,7 @@ function renderAnalyticsData(data) {
     var ventas = data.ventas || 0;
     var ventasAgrupado = data.ventasAgrupado || [];
     
-    
+    console.log("📊 ventasAgrupado:", JSON.stringify(ventasAgrupado));
     
     var chartEl = document.getElementById('salesChart');
     if (chartEl) {
@@ -1707,12 +1656,12 @@ function renderAnalyticsData(data) {
 }
 
 function renderAnalytics() {
-    
+    console.log("📊 renderAnalytics called");
     
     var viewAnalytics = document.getElementById('view-analytics');
     if (viewAnalytics) {
         viewAnalytics.classList.remove('hidden');
-        
+        console.log("📊 view-analytics shown");
     }
     
     var ventas = 0;
@@ -1720,7 +1669,7 @@ function renderAnalytics() {
     var ganancia = 0;
     
     if (appData && appData.pedidos) {
-        
+        console.log("📊 Pedidos: " + appData.pedidos.length);
         
         for (var i = 0; i < appData.pedidos.length; i++) {
             var p = appData.pedidos[i];
@@ -1731,7 +1680,7 @@ function renderAnalytics() {
         }
     }
     
-    
+    console.log("📊 Ventas: " + ventas + " Pedidos: " + pedidos);
     
     // Mostrar valores
     var salesEl = document.getElementById('analyticsTotalSales');
@@ -1796,7 +1745,7 @@ if (gananciaEl) {
 // MODALES DE PRODUCTO
 // ==========================================
 function openAddModal() {
-    $text("modalProductTitle", "Nuevo Producto");
+    document.getElementById("modalProductTitle").innerText = "Nuevo Producto";
     document.getElementById("editId").value = "";
     document.getElementById("pNombre").value = "";
     document.getElementById("pPrecio").value = "";
@@ -1884,10 +1833,10 @@ async function vincularYGuardar() {
     const datos = { nombre, eslogan, categorias, wa, sobre, color, modo_feria: modoFeria, mantenimiento: mantenimiento };
     if (pin) datos.pin = pin;
 
-    
+    console.log("Guardando config:", datos);
 
     const res = await NexusCore.ejecutar('updateConfig', datos);
-    
+    console.log("Respuesta updateConfig:", res);
 
     if (res.success) {
         if (pin) currentPin = pin;
@@ -1904,7 +1853,7 @@ async function vincularYGuardar() {
         localStorage.setItem('nx_config_timestamp', Date.now());
         selectTheme(color);
         toggleModal("modalConfig", false);
-        $text("successMessage", "Configuración guardada.");
+        document.getElementById("successMessage").innerText = "Configuración guardada.";
         toggleModal("modalSuccess", true);
     } else {
         NexusDialog.alert(res.message || "Error al guardar en el servidor.", "Error");
@@ -1949,56 +1898,19 @@ async function saveWizard() {
     if (!wa)                      return NexusDialog.alert("El número de WhatsApp es obligatorio.", "Error");
 
     const btn = document.getElementById("btnWizSave");
-    if (btn) {
-        btn.innerText = "Creando Tienda...";
-        btn.disabled = true;
-    }
-    
-    var url = NEXUS_CONFIG.API_URL;
-    var payload = { shopId: NEXUS_CONFIG.shopId, action: 'updateConfig', data: { pin: pin, nombre: nombre, eslogan: eslogan, categorias: categorias, wa: wa, sobre: sobre } };
-    
-    try {
-        var response = await fetch(url, {
-            method: "POST",
-            body: JSON.stringify(payload),
-            redirect: "manual"
-        });
-        
-        if (response.type === 'opaqueredirect') {
-            var redirectUrl = response.url;
-            var newResponse = await fetch(redirectUrl);
-            var text = await newResponse.text();
-            var res = JSON.parse(text);
-        } else {
-            var text = await response.text();
-            var res = JSON.parse(text);
-        }
-        
-        if (res.success) {
-            currentPin = pin;
-            localStorage.setItem("nx_session", "valid");
-            
-            // Recargar datos frescos del servidor
-            var refreshRes = await NexusCore.ejecutar('getInitData');
-            if (refreshRes.success) {
-                appData = refreshRes;
-                dbConfig = refreshRes.config;
-                dbProductos = refreshRes.productos || [];
-                dbCupones = refreshRes.cupones || [];
-            }
-            
-            toggleModal("modalWizard", false);
-            initPreloaded();
-        } else {
-            NexusDialog.alert(res.message || "Error al crear la tienda.", "Error");
-            if (btn) {
-                btn.innerText = "Crear Tienda";
-                btn.disabled = false;
-            }
-        }
-    } catch(e) {
-        console.error("Error saveWizard:", e);
-        NexusDialog.alert("Error: " + e.message, "Error");
+    btn.innerText = "Creando Tienda...";
+    btn.disabled = true;
+
+    const res = await NexusCore.ejecutar('updateConfig', { pin, nombre, eslogan, categorias, wa, sobre });
+    if (res.success) {
+        currentPin = pin;
+        localStorage.setItem("nx_session", "valid");
+        const refreshData = await NexusCore.ejecutar('getInitData');
+        if (refreshData.success) { appData = refreshData; }
+        toggleModal("modalWizard", false);
+        initPreloaded();
+    } else {
+        NexusDialog.alert(res.message || "Error al crear la tienda.", "Error");
         btn.innerText = "Crear Tienda";
         btn.disabled = false;
     }
