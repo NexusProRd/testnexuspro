@@ -267,18 +267,26 @@ window.addEventListener('touchstart', resetInactivityTimer);
 // ==========================================
 window.onload = async () => {
     
-    
-    // Esperar a que NEXUS_CONFIG esté listo
-    let intentos = 0;
-    while (!NEXUS_CONFIG.isReady && intentos < 50) {
-        await new Promise(r => setTimeout(r, 100));
-        intentos++;
+    // FORZAR inicialización si no está lista
+    if (!NEXUS_CONFIG.isReady) {
+        var params = new URLSearchParams(window.location.search);
+        var identifier = params.get('s');
+        
+        if (identifier) {
+            // Usar fallback directamente
+            NEXUS_CONFIG.shopId = identifier;
+            NEXUS_CONFIG.pccShopId = identifier;
+            NEXUS_CONFIG.API_URL = "https://script.google.com/macros/s/AKfycbwr3K5qcSQvmEb1qhoeM0L9E26k1nSHTjmBdoehu3vRcssLltMInwM4AaWw34ZOuKEF/exec";
+            NEXUS_CONFIG.isReady = true;
+        }
     }
+    
+    // Esperar un poco más para asegurar
+    await new Promise(r => setTimeout(r, 500));
     
     if (!NEXUS_CONFIG.isReady) {
         var loginSubtitle = document.getElementById('loginSubtitle');
         if (loginSubtitle) loginSubtitle.innerText = "ERROR DE CONEXIÓN";
-        NexusDialog.alert("No se pudo conectar con el servidor.", "Error");
         return;
     }
     
