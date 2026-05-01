@@ -263,50 +263,35 @@ window.addEventListener('keypress',   resetInactivityTimer);
 window.addEventListener('touchstart', resetInactivityTimer);
 
 // ==========================================
-// INICIALIZACIÓN - DEBUG AGRESIVO
+// INICIALIZACIÓN
 // ==========================================
 window.onload = async () => {
-    console.log(">>> INICIO window.onload");
     
     var FALLBACK_URL = "https://script.google.com/macros/s/AKfycbwr3K5qcSQvmEb1qhoeM0L9E26k1nSHTjmBdoehu3vRcssLltMInwM4AaWw34ZOuKEF/exec";
     
     var params = new URLSearchParams(window.location.search);
-    var identifier = params.get('s') || "test";
+    var identifier = params.get('s') || "";
     
-    console.log(">>> identifier:", identifier);
-    alert("1. identifier: " + identifier);
-    
-    // ASEGURAR que NEXUS_CONFIG exista
-    if (typeof NEXUS_CONFIG === 'undefined') {
-        console.log(">>> NEXUS_CONFIG undefined, creando...");
-        window.NEXUS_CONFIG = {};
+    // Si no hay identifier, intentar obtener de localStorage
+    if (!identifier) {
+        identifier = localStorage.getItem('nexus_shopId') || sessionStorage.getItem('shopId');
     }
     
-    console.log(">>> NEXUS_CONFIG:", NEXUS_CONFIG);
-    alert("2. NEXUS_CONFIG creado");
+    if (typeof NEXUS_CONFIG === 'undefined') {
+        window.NEXUS_CONFIG = {};
+    }
     
     // Crear método call inline
     NEXUS_CONFIG.call = async function(action, data = {}) {
         var url = this.API_URL || FALLBACK_URL;
-        
-        var payload = {
-            shopId: this.shopId || identifier,
-            action: action,
-            ...data
-        };
-        
-        console.log(">>> fetch URL:", url, "action:", action, "payload:", payload);
-        alert("3. Intentando fetch a: " + url);
+        var payload = { shopId: this.shopId || identifier, action: action, ...data };
         
         var response = await fetch(url, {
             method: "POST",
             body: JSON.stringify(payload),
             redirect: "follow"
         });
-        var text = await response.text();
-        console.log(">>> respuesta:", text.substring(0, 300));
-        alert("4. Respuesta: " + text.substring(0,200));
-        return JSON.parse(text);
+        return JSON.parse(await response.text());
     };
     
     // Forzar propiedades
@@ -316,14 +301,10 @@ window.onload = async () => {
     NEXUS_CONFIG.isReady = true;
     NEXUS_CONFIG.getShopId = function() { return this.shopId; };
     
-    console.log(">>> NEXUS_CONFIG final:", NEXUS_CONFIG);
-    alert("6. Config lista");
-    
     var loginSubtitle = document.getElementById('loginSubtitle');
     if (loginSubtitle) loginSubtitle.innerHTML = '<span class="loader"></span> Conectando...';
     
     var shopId = identifier;
-    console.log(">>> shopId:", shopId);
     
     
     if (shopId) {

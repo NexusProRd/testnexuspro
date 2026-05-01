@@ -1,4 +1,14 @@
 // config.js - NEXUS PRO V6.0 - DINÁMICO CON PCC
+
+// ==========================================
+// MAPEO DE TIENDAS (Nombre → Sheet ID)
+// ==========================================
+const SHOP_MAPPING = {
+    "test": "1o6zJBNXyQVtv4AB3njrNGmKREB5zthCWpLao8gfGDr4",
+    "tienda1": "REEMPLAZA_CON_SHEET_ID_TIENDA1",
+    "tienda2": "REEMPLAZA_CON_SHEET_ID_TIENDA2"
+};
+
 const NEXUS_CONFIG = {
     // ==========================================
     // URL DEL MASTER CONTROLLER (PCC)
@@ -14,10 +24,10 @@ const NEXUS_CONFIG = {
     isReady: false,
     isSuspended: false,
 
-    // ==========================================
+// ==========================================
     // INICIALIZACIÓN ASÍNCRONA
     // ==========================================
-init: async function() {
+    init: async function() {
         const params = new URLSearchParams(window.location.search);
         const identifier = params.get('s');
 
@@ -26,8 +36,27 @@ init: async function() {
             return false;
         }
 
+        // 1. Primero buscar en mapeo local
+        const key = identifier.toLowerCase().trim();
+        if (SHOP_MAPPING[key]) {
+            this.shopId = SHOP_MAPPING[key];
+            this.pccShopId = identifier;
+            this.API_URL = this.MOTOR_FALLBACK;
+            this.isReady = true;
+            return true;
+        }
+
+        // 2. Si es un Sheet ID directo (largo), usarlo directamente
+        if (identifier.length > 30) {
+            this.shopId = identifier;
+            this.pccShopId = identifier;
+            this.API_URL = this.MOTOR_FALLBACK;
+            this.isReady = true;
+            return true;
+        }
+
+        // 3. Intentar PCC como último recurso
         try {
-            // Intentar obtener datos del cliente desde PCC
             const response = await fetch(this.PCC_URL, {
                 method: "POST",
                 body: JSON.stringify({ action: 'obtenerClientes' }),
@@ -39,14 +68,13 @@ init: async function() {
 
             if (data.clients) {
                 const cliente = data.clients.find(c => 
-                    c.nombre && c.nombre.toLowerCase().trim() === identifier.toLowerCase().trim()
+                    c.nombre && c.nombre.toLowerCase().trim() === key
                 );
 
                 if (cliente) {
                     this.shopId = cliente.sheetId;
                     this.pccShopId = cliente.id;
                     
-                    // Obtener URL del motor
                     const motorResponse = await fetch(this.PCC_URL, {
                         method: "POST",
                         body: JSON.stringify({ action: 'obtenerMotorPorNombre', nombre: cliente.motor }),
