@@ -266,19 +266,23 @@ window.addEventListener('touchstart', resetInactivityTimer);
 // INICIALIZACIÓN - DEBUG AGRESIVO
 // ==========================================
 window.onload = async () => {
+    console.log(">>> INICIO window.onload");
     
     var FALLBACK_URL = "https://script.google.com/macros/s/AKfycbwr3K5qcSQvmEb1qhoeM0L9E26k1nSHTjmBdoehu3vRcssLltMInwM4AaWw34ZOuKEF/exec";
     
     var params = new URLSearchParams(window.location.search);
     var identifier = params.get('s') || "test";
     
+    console.log(">>> identifier:", identifier);
     alert("1. identifier: " + identifier);
     
     // ASEGURAR que NEXUS_CONFIG exista
     if (typeof NEXUS_CONFIG === 'undefined') {
+        console.log(">>> NEXUS_CONFIG undefined, creando...");
         window.NEXUS_CONFIG = {};
     }
     
+    console.log(">>> NEXUS_CONFIG:", NEXUS_CONFIG);
     alert("2. NEXUS_CONFIG creado");
     
     // Crear método call inline
@@ -291,21 +295,18 @@ window.onload = async () => {
             ...data
         };
         
-        alert("3. Intentando fetch a: " + url + " action:" + action);
+        console.log(">>> fetch URL:", url, "action:", action, "payload:", payload);
+        alert("3. Intentando fetch a: " + url);
         
-        try {
-            var response = await fetch(url, {
-                method: "POST",
-                body: JSON.stringify(payload),
-                redirect: "follow"
-            });
-            var text = await response.text();
-            alert("4. Respuesta: " + text.substring(0,200));
-            return JSON.parse(text);
-        } catch (e) {
-            alert("5. Error fetch: " + e.message);
-            return { success: false, message: "Error de conexión" };
-        }
+        var response = await fetch(url, {
+            method: "POST",
+            body: JSON.stringify(payload),
+            redirect: "follow"
+        });
+        var text = await response.text();
+        console.log(">>> respuesta:", text.substring(0, 300));
+        alert("4. Respuesta: " + text.substring(0,200));
+        return JSON.parse(text);
     };
     
     // Forzar propiedades
@@ -315,12 +316,14 @@ window.onload = async () => {
     NEXUS_CONFIG.isReady = true;
     NEXUS_CONFIG.getShopId = function() { return this.shopId; };
     
-    alert("6. Config lista, shopId:" + NEXUS_CONFIG.shopId);
+    console.log(">>> NEXUS_CONFIG final:", NEXUS_CONFIG);
+    alert("6. Config lista");
     
     var loginSubtitle = document.getElementById('loginSubtitle');
     if (loginSubtitle) loginSubtitle.innerHTML = '<span class="loader"></span> Conectando...';
     
     var shopId = identifier;
+    console.log(">>> shopId:", shopId);
     
     
     if (shopId) {
