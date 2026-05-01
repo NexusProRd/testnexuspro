@@ -1909,25 +1909,39 @@ async function saveWizard() {
     btn.innerText = "Creando Tienda...";
     btn.disabled = true;
 
-    console.log(">>> Guardando config, shopId:", NEXUS_CONFIG.shopId);
+    alert("1. Iniciando... shopId=" + NEXUS_CONFIG.shopId);
+    
+    // Llamar directamente al API
+    var url = NEXUS_CONFIG.API_URL;
+    var payload = { shopId: NEXUS_CONFIG.shopId, action: 'updateConfig', pin: pin, nombre: nombre, eslogan: eslogan, categorias: categorias, wa: wa, sobre: sobre };
+    
+    alert("2. URL=" + url + " payload=" + JSON.stringify(payload));
     
     try {
-        const res = await NexusCore.ejecutar('updateConfig', { pin, nombre, eslogan, categorias, wa, sobre });
-        console.log(">>> Respuesta updateConfig:", res);
+        var response = await fetch(url, {
+            method: "POST",
+            body: JSON.stringify(payload),
+            redirect: "follow"
+        });
+        alert("3. Response status: " + response.status);
+        var text = await response.text();
+        alert("4. Response: " + text.substring(0, 200));
+        var res = JSON.parse(text);
         
         if (res.success) {
+            alert("5. Éxito!");
             currentPin = pin;
             localStorage.setItem("nx_session", "valid");
-            const refreshData = await NexusCore.ejecutar('getInitData');
-            if (refreshData.success) { appData = refreshData; }
             toggleModal("modalWizard", false);
             initPreloaded();
         } else {
+            alert("6. Error: " + (res.message || "Unknown"));
             NexusDialog.alert(res.message || "Error al crear la tienda.", "Error");
             btn.innerText = "Crear Tienda";
             btn.disabled = false;
         }
     } catch(e) {
+        alert("7. Catch error: " + e.message);
         console.error(">>> Error saveWizard:", e);
         NexusDialog.alert("Error: " + e.message, "Error");
         btn.innerText = "Crear Tienda";
