@@ -1908,41 +1908,49 @@ async function saveWizard() {
     const btn = document.getElementById("btnWizSave");
     btn.innerText = "Creando Tienda...";
     btn.disabled = true;
-
-    alert("1. Iniciando... shopId=" + NEXUS_CONFIG.shopId);
     
-    // Llamar directamente al API
     var url = NEXUS_CONFIG.API_URL;
     var payload = { shopId: NEXUS_CONFIG.shopId, action: 'updateConfig', data: { pin: pin, nombre: nombre, eslogan: eslogan, categorias: categorias, wa: wa, sobre: sobre } };
-    
-    alert("2. URL=" + url + " payload=" + JSON.stringify(payload));
     
     try {
         var response = await fetch(url, {
             method: "POST",
             body: JSON.stringify(payload),
-            redirect: "follow"
+            redirect: "manual"
         });
-        alert("3. Response status: " + response.status);
-        var text = await response.text();
-        alert("4. Response: " + text.substring(0, 200));
-        var res = JSON.parse(text);
+        
+        if (response.type === 'opaqueredirect') {
+            var redirectUrl = response.url;
+            var newResponse = await fetch(redirectUrl);
+            var text = await newResponse.text();
+            var res = JSON.parse(text);
+        } else {
+            var text = await response.text();
+            var res = JSON.parse(text);
+        }
         
         if (res.success) {
-            alert("5. Éxito!");
             currentPin = pin;
             localStorage.setItem("nx_session", "valid");
+            
+            // Recargar datos frescos del servidor
+            var refreshRes = await NexusCore.ejecutar('getInitData');
+            if (refreshRes.success) {
+                appData = refreshRes;
+                dbConfig = refreshRes.config;
+                dbProductos = refreshRes.productos || [];
+                dbCupones = refreshRes.cupones || [];
+            }
+            
             toggleModal("modalWizard", false);
             initPreloaded();
         } else {
-            alert("6. Error: " + (res.message || "Unknown"));
             NexusDialog.alert(res.message || "Error al crear la tienda.", "Error");
             btn.innerText = "Crear Tienda";
             btn.disabled = false;
         }
     } catch(e) {
-        alert("7. Catch error: " + e.message);
-        console.error(">>> Error saveWizard:", e);
+        console.error("Error saveWizard:", e);
         NexusDialog.alert("Error: " + e.message, "Error");
         btn.innerText = "Crear Tienda";
         btn.disabled = false;
