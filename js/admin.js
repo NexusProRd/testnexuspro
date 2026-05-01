@@ -263,7 +263,7 @@ window.addEventListener('keypress',   resetInactivityTimer);
 window.addEventListener('touchstart', resetInactivityTimer);
 
 // ==========================================
-// INICIALIZACIÓN - FORZAR DESDE EL PRINCIPIO
+// INICIALIZACIÓN - DEBUG AGRESIVO
 // ==========================================
 window.onload = async () => {
     
@@ -272,45 +272,50 @@ window.onload = async () => {
     var params = new URLSearchParams(window.location.search);
     var identifier = params.get('s') || "test";
     
-    // ASEGURAR que NEXUS_CONFIG exista y tenga las propiedades necesarias
+    alert("1. identifier: " + identifier);
+    
+    // ASEGURAR que NEXUS_CONFIG exista
     if (typeof NEXUS_CONFIG === 'undefined') {
         window.NEXUS_CONFIG = {};
     }
     
-    // Asegurar que el método call exista
-    if (!NEXUS_CONFIG.call) {
-        NEXUS_CONFIG.call = async function(action, data = {}) {
-            var url = this.API_URL;
-            if (!url) url = FALLBACK_URL;
-            
-            var payload = {
-                shopId: this.shopId || identifier,
-                action: action,
-                ...data
-            };
-            
-            try {
-                var response = await fetch(url, {
-                    method: "POST",
-                    body: JSON.stringify(payload),
-                    redirect: "follow"
-                });
-                return JSON.parse(await response.text());
-            } catch (e) {
-                return { success: false, message: "Error de conexión" };
-            }
-        };
-    }
+    alert("2. NEXUS_CONFIG creado");
     
-    // Forzar propiedades necesarias
+    // Crear método call inline
+    NEXUS_CONFIG.call = async function(action, data = {}) {
+        var url = this.API_URL || FALLBACK_URL;
+        
+        var payload = {
+            shopId: this.shopId || identifier,
+            action: action,
+            ...data
+        };
+        
+        alert("3. Intentando fetch a: " + url + " action:" + action);
+        
+        try {
+            var response = await fetch(url, {
+                method: "POST",
+                body: JSON.stringify(payload),
+                redirect: "follow"
+            });
+            var text = await response.text();
+            alert("4. Respuesta: " + text.substring(0,200));
+            return JSON.parse(text);
+        } catch (e) {
+            alert("5. Error fetch: " + e.message);
+            return { success: false, message: "Error de conexión" };
+        }
+    };
+    
+    // Forzar propiedades
     NEXUS_CONFIG.shopId = identifier;
     NEXUS_CONFIG.pccShopId = identifier;
     NEXUS_CONFIG.API_URL = FALLBACK_URL;
     NEXUS_CONFIG.isReady = true;
+    NEXUS_CONFIG.getShopId = function() { return this.shopId; };
     
-    if (!NEXUS_CONFIG.getShopId) {
-        NEXUS_CONFIG.getShopId = function() { return this.shopId; };
-    }
+    alert("6. Config lista, shopId:" + NEXUS_CONFIG.shopId);
     
     var loginSubtitle = document.getElementById('loginSubtitle');
     if (loginSubtitle) loginSubtitle.innerHTML = '<span class="loader"></span> Conectando...';
