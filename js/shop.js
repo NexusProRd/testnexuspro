@@ -160,29 +160,48 @@ async function cargarTienda() {
     
     try {
         const res = await NexusCore.ejecutar('getInitData');
+        console.log(">>> Respuesta del Motor:", res);
         
         if (res.message === 'ACCESO_DENEGADO' || res.message === 'Tienda inactiva') {
             return;
         }
         
-        if (res.success && res.config && res.config.Nombre_Tienda) {
-            dbConfig = res.config;
-            dbProductos = res.productos.filter(function(p) { return p.estado === "Publicado"; });
-            dbCupones = res.cupones || [];
-            setCacheData('nx_config', dbConfig);
-            setCacheData('nx_productos', dbProductos);
-            setCacheData('nx_cupones', dbCupones);
-            aplicarConfigTienda();
-            if (localStorage.getItem('nexus_coupon')) {
-                cuponAplicado = JSON.parse(localStorage.getItem('nexus_coupon'));
-            }
-            renderizarCategorias();
-            filtrarBusqueda();
-            actualizarCarritoUI();
-            initDarkMode();
+        // Validar que la tienda existe
+        if (!res.success) {
+            var maintenanceEl = document.getElementById("maintenanceScreen");
+            if (maintenanceEl) maintenanceEl.style.display = 'flex';
             return;
         }
-    } catch (e) { }
+        
+        var tieneNombre = res.config && res.config.Nombre_Tienda && res.config.Nombre_Tienda.trim() !== "";
+        var tieneProductos = res.productos && res.productos.length > 0;
+        console.log(">>> Tiene Nombre:", tieneNombre, "Tiene Productos:", tieneProductos);
+        
+        // Si no tiene nombre NI productos, mostrar mantenimiento
+        if (!tieneNombre && !tieneProductos) {
+            var maintenanceEl = document.getElementById("maintenanceScreen");
+            if (maintenanceEl) maintenanceEl.style.display = 'flex';
+            return;
+        }
+        
+        // La tienda existe - cargar datos
+        dbConfig = res.config;
+        dbProductos = res.productos.filter(function(p) { return p.estado === "Publicado"; });
+        dbCupones = res.cupones || [];
+        setCacheData('nx_config', dbConfig);
+        setCacheData('nx_productos', dbProductos);
+        setCacheData('nx_cupones', dbCupones);
+        aplicarConfigTienda();
+        if (localStorage.getItem('nexus_coupon')) {
+            cuponAplicado = JSON.parse(localStorage.getItem('nexus_coupon'));
+        }
+        renderizarCategorias();
+        filtrarBusqueda();
+        actualizarCarritoUI();
+        initDarkMode();
+    } catch (e) { 
+        console.log(">>> Error cargarTienda:", e);
+    }
 
     const cachedConfig = getCacheData('nx_config');
     const cachedProds = getCacheData('nx_productos');

@@ -332,20 +332,30 @@ window.onload = async () => {
         if (loginSubtitle) loginSubtitle.innerHTML = '<span class="loader"></span> Sincronizando Motor...';
 
         try {
-            
             var res = await NexusCore.ejecutar('getInitData');
-            
+            console.log(">>> Respuesta del Master:", res);
             
             if (res.success) {
                 appData = res;
-                currentPin = String(res.config.PIN_Acceso || "1234");
-
-                if (!res.config.Nombre_Tienda || res.config.Nombre_Tienda.trim() === "") {
+                var tieneNombre = res.config && res.config.Nombre_Tienda && res.config.Nombre_Tienda.trim() !== "";
+                var tieneProductos = res.productos && res.productos.length > 0;
+                
+                console.log(">>> Tiene Nombre:", tieneNombre);
+                console.log(">>> Tiene Productos:", tieneProductos);
+                
+                // La tienda existe si tiene productos O tiene nombre
+                var tiendaExiste = tieneNombre || tieneProductos;
+                
+                if (!tiendaExiste) {
+                    // No tiene nombre ni productos - mostrar wizard
                     document.getElementById("loginSection").style.display = "none";
                     toggleModal('modalWizard', true);
                     return;
                 }
 
+                // La tienda existe - pedir PIN
+                currentPin = String(res.config.PIN_Acceso || "1234");
+                
                 var loginSubtitle = document.getElementById('loginSubtitle');
                 if (loginSubtitle) loginSubtitle.innerText = "SISTEMA LISTO";
                 
@@ -368,12 +378,13 @@ window.onload = async () => {
                 throw new Error(res.message || "ID Inválido");
             }
         } catch(e) {
-            NexusDialog.alert("Error: " + e.message, "Error");
+            console.log(">>> Error de conexión:", e.message);
+            NexusDialog.alert("Error de Conexión con el Servidor: " + e.message, "Error");
             var loginSubtitle = document.getElementById('loginSubtitle');
             if (loginSubtitle) loginSubtitle.innerText = "ERROR DE CONEXIÓN";
         }
     } else {
-        NexusDialog.alert("No se encontró el ID en config.js", "Error");
+        NexusDialog.alert("No se encontró el ID. Agrega la tienda en SHOP_MAPPING de config.js", "Error");
     }
 };
 
