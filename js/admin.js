@@ -269,38 +269,26 @@ window.onload = async () => {
     
     var FALLBACK_URL = "https://script.google.com/macros/s/AKfycbwr3K5qcSQvmEb1qhoeM0L9E26k1nSHTjmBdoehu3vRcssLltMInwM4AaWw34ZOuKEF/exec";
     
-    // FORZAR inicialización si no está lista
-    if (!NEXUS_CONFIG.isReady) {
+    // Si no está listo, forzar con fallback
+    if (!NEXUS_CONFIG.isReady || !NEXUS_CONFIG.API_URL) {
         var params = new URLSearchParams(window.location.search);
-        var identifier = params.get('s') || params.get('shopId') || localStorage.getItem('nexus_shopId');
+        var identifier = params.get('s');
         
-        if (identifier) {
-            NEXUS_CONFIG.shopId = identifier;
-            NEXUS_CONFIG.pccShopId = identifier;
-            NEXUS_CONFIG.API_URL = FALLBACK_URL;
-            NEXUS_CONFIG.isReady = true;
-        } else {
-            // Intentar obtener de sessionStorage
-            var savedShop = sessionStorage.getItem('shopId') || localStorage.getItem('shopId');
-            if (savedShop) {
-                NEXUS_CONFIG.shopId = savedShop;
-                NEXUS_CONFIG.pccShopId = savedShop;
-                NEXUS_CONFIG.API_URL = FALLBACK_URL;
-                NEXUS_CONFIG.isReady = true;
-            }
+        if (!identifier) {
+            // Obtener del pathname si está en formato /s/nombre
+            var pathParts = window.location.pathname.split('/').filter(p => p);
+            identifier = pathParts.find(p => p.length > 2 && !p.includes('.'));
         }
+        
+        if (!identifier) identifier = "test";
+        
+        NEXUS_CONFIG.shopId = identifier;
+        NEXUS_CONFIG.pccShopId = identifier;
+        NEXUS_CONFIG.API_URL = FALLBACK_URL;
+        NEXUS_CONFIG.isReady = true;
     }
-    
-    // Esperar un poco más para asegurar
-    await new Promise(r => setTimeout(r, 500));
     
     var loginSubtitle = document.getElementById('loginSubtitle');
-    
-    if (!NEXUS_CONFIG.isReady) {
-        if (loginSubtitle) loginSubtitle.innerText = "ERROR DE CONEXIÓN";
-        return;
-    }
-    
     if (loginSubtitle) loginSubtitle.innerHTML = '<span class="loader"></span> Conectando...';
     
     var shopId = NEXUS_CONFIG.getShopId();
