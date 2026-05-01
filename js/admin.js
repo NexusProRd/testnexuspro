@@ -263,35 +263,31 @@ window.addEventListener('keypress',   resetInactivityTimer);
 window.addEventListener('touchstart', resetInactivityTimer);
 
 // ==========================================
-// INICIALIZACIÓN
+// INICIALIZACIÓN - FORZAR DESDE EL PRINCIPIO
 // ==========================================
 window.onload = async () => {
     
     var FALLBACK_URL = "https://script.google.com/macros/s/AKfycbwr3K5qcSQvmEb1qhoeM0L9E26k1nSHTjmBdoehu3vRcssLltMInwM4AaWw34ZOuKEF/exec";
     
-    // Si no está listo, forzar con fallback
-    if (!NEXUS_CONFIG.isReady || !NEXUS_CONFIG.API_URL) {
-        var params = new URLSearchParams(window.location.search);
-        var identifier = params.get('s');
-        
-        if (!identifier) {
-            // Obtener del pathname si está en formato /s/nombre
-            var pathParts = window.location.pathname.split('/').filter(p => p);
-            identifier = pathParts.find(p => p.length > 2 && !p.includes('.'));
-        }
-        
-        if (!identifier) identifier = "test";
-        
-        NEXUS_CONFIG.shopId = identifier;
-        NEXUS_CONFIG.pccShopId = identifier;
-        NEXUS_CONFIG.API_URL = FALLBACK_URL;
-        NEXUS_CONFIG.isReady = true;
+    // siempre forzar inicialización primero
+    var params = new URLSearchParams(window.location.search);
+    var identifier = params.get('s') || "test";
+    
+    // Crear NEXUS_CONFIG si no existe
+    if (typeof NEXUS_CONFIG === 'undefined') {
+        window.NEXUS_CONFIG = {};
     }
+    
+    window.NEXUS_CONFIG.shopId = identifier;
+    window.NEXUS_CONFIG.pccShopId = identifier;
+    window.NEXUS_CONFIG.API_URL = FALLBACK_URL;
+    window.NEXUS_CONFIG.isReady = true;
+    window.NEXUS_CONFIG.getShopId = function() { return this.shopId; };
     
     var loginSubtitle = document.getElementById('loginSubtitle');
     if (loginSubtitle) loginSubtitle.innerHTML = '<span class="loader"></span> Conectando...';
     
-    var shopId = NEXUS_CONFIG.getShopId();
+    var shopId = identifier;
     
     
     if (shopId) {
