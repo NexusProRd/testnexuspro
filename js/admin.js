@@ -1913,7 +1913,7 @@ async function saveWizard() {
     
     // Llamar directamente al API
     var url = NEXUS_CONFIG.API_URL;
-    var payload = { shopId: NEXUS_CONFIG.shopId, action: 'updateConfig', pin: pin, nombre: nombre, eslogan: eslogan, categorias: categorias, wa: wa, sobre: sobre };
+    var payload = { shopId: NEXUS_CONFIG.shopId, action: 'updateConfig', data: { pin: pin, nombre: nombre, eslogan: eslogan, categorias: categorias, wa: wa, sobre: sobre } };
     
     alert("2. URL=" + url + " payload=" + JSON.stringify(payload));
     
