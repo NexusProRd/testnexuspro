@@ -269,20 +269,48 @@ window.onload = async () => {
     
     var FALLBACK_URL = "https://script.google.com/macros/s/AKfycbwr3K5qcSQvmEb1qhoeM0L9E26k1nSHTjmBdoehu3vRcssLltMInwM4AaWw34ZOuKEF/exec";
     
-    // siempre forzar inicialización primero
     var params = new URLSearchParams(window.location.search);
     var identifier = params.get('s') || "test";
     
-    // Crear NEXUS_CONFIG si no existe
+    // ASEGURAR que NEXUS_CONFIG exista y tenga las propiedades necesarias
     if (typeof NEXUS_CONFIG === 'undefined') {
         window.NEXUS_CONFIG = {};
     }
     
-    window.NEXUS_CONFIG.shopId = identifier;
-    window.NEXUS_CONFIG.pccShopId = identifier;
-    window.NEXUS_CONFIG.API_URL = FALLBACK_URL;
-    window.NEXUS_CONFIG.isReady = true;
-    window.NEXUS_CONFIG.getShopId = function() { return this.shopId; };
+    // Asegurar que el método call exista
+    if (!NEXUS_CONFIG.call) {
+        NEXUS_CONFIG.call = async function(action, data = {}) {
+            var url = this.API_URL;
+            if (!url) url = FALLBACK_URL;
+            
+            var payload = {
+                shopId: this.shopId || identifier,
+                action: action,
+                ...data
+            };
+            
+            try {
+                var response = await fetch(url, {
+                    method: "POST",
+                    body: JSON.stringify(payload),
+                    redirect: "follow"
+                });
+                return JSON.parse(await response.text());
+            } catch (e) {
+                return { success: false, message: "Error de conexión" };
+            }
+        };
+    }
+    
+    // Forzar propiedades necesarias
+    NEXUS_CONFIG.shopId = identifier;
+    NEXUS_CONFIG.pccShopId = identifier;
+    NEXUS_CONFIG.API_URL = FALLBACK_URL;
+    NEXUS_CONFIG.isReady = true;
+    
+    if (!NEXUS_CONFIG.getShopId) {
+        NEXUS_CONFIG.getShopId = function() { return this.shopId; };
+    }
     
     var loginSubtitle = document.getElementById('loginSubtitle');
     if (loginSubtitle) loginSubtitle.innerHTML = '<span class="loader"></span> Conectando...';
