@@ -10,6 +10,7 @@ const NexusCore = {
             const resultado = await NEXUS_CONFIG.call(accion, datos);
 
             if (resultado.message === 'ACCESO_DENEGADO') {
+                NEXUS_CONFIG.isSuspended = true;
                 this.bloquearTienda();
                 return { success: false, message: 'ACCESO_DENEGADO' };
             }
