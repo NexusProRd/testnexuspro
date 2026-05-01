@@ -26,7 +26,44 @@ init: async function() {
             return false;
         }
 
-        // USAR FALLBACK DIRECTAMENTE SI EL PCC NO RESPONDE
+        try {
+            // Intentar obtener datos del cliente desde PCC
+            const response = await fetch(this.PCC_URL, {
+                method: "POST",
+                body: JSON.stringify({ action: 'obtenerClientes' }),
+                redirect: "follow"
+            });
+
+            const text = await response.text();
+            const data = JSON.parse(text);
+
+            if (data.clients) {
+                const cliente = data.clients.find(c => 
+                    c.nombre && c.nombre.toLowerCase().trim() === identifier.toLowerCase().trim()
+                );
+
+                if (cliente) {
+                    this.shopId = cliente.sheetId;
+                    this.pccShopId = cliente.id;
+                    
+                    // Obtener URL del motor
+                    const motorResponse = await fetch(this.PCC_URL, {
+                        method: "POST",
+                        body: JSON.stringify({ action: 'obtenerMotorPorNombre', nombre: cliente.motor }),
+                        redirect: "follow"
+                    });
+                    const motorData = JSON.parse(await motorResponse.text());
+                    
+                    this.API_URL = motorData.success ? motorData.url : this.MOTOR_FALLBACK;
+                    this.isReady = true;
+                    return true;
+                }
+            }
+        } catch (e) {
+            // Si falla, usar fallback
+        }
+
+        // Fallback: usar motor directo
         this.shopId = identifier;
         this.pccShopId = identifier;
         this.API_URL = this.MOTOR_FALLBACK;
@@ -177,7 +214,7 @@ init: async function() {
             shopId: self.getShopId(),
             pccShopId: self.pccShopId || self.getShopId(),
             pin: self.getPin(),
-            domain: window.location.href,
+            domain: window.location.host,
             data: data || {}
         };
 
