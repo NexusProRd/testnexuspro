@@ -88,15 +88,12 @@ const NEXUS_CONFIG = {
                 }
             }
         } catch (e) {
-            // Si falla, usar fallback
+            console.log("Error consultando PCC:", e);
         }
 
-        // Fallback: usar motor directo
-        this.shopId = identifier;
-        this.pccShopId = identifier;
-        this.API_URL = this.MOTOR_FALLBACK;
-        this.isReady = true;
-        return true;
+        // Si no se encontró en mapeo local ni PCC, mostrar error
+        this.mostrarError("Tienda no encontrada", "La tienda '" + identifier + "' no existe en el sistema.");
+        return false;
     },
 
     // ==========================================

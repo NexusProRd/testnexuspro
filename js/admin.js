@@ -281,34 +281,86 @@ window.addEventListener('touchstart', resetInactivityTimer);
 // ==========================================
 window.onload = async () => {
     
-    var FALLBACK_URL = "https://script.google.com/macros/s/AKfycbwr3K5qcSQvmEb1qhoeM0L9E26k1nSHTjmBdoehu3vRcssLltMInwM4AaWw34ZOuKEF/exec";
+    var PCC_URL = "https://script.google.com/macros/s/AKfycbxikMAM8onAKt8mDPS-VXfw5M3myiHMFfUbz3t_QaMWrU9V_qvO2ZoP-RD19N6qplnMwQ/exec";
+    var MOTOR_FALLBACK = "https://script.google.com/macros/s/AKfycbwr3K5qcSQvmEb1qhoeM0L9E26k1nSHTjmBdoehu3vRcssLltMInwM4AaWw34ZOuKEF/exec";
     
     var params = new URLSearchParams(window.location.search);
     var identifier = params.get('s') || "";
     
-    // Crear NEXUS_CONFIG desde cero con el mapeo
+    var loginSubtitle = document.getElementById('loginSubtitle');
+    if (loginSubtitle) loginSubtitle.innerHTML = '<span class="loader"></span> Validando tienda...';
+    
+    if (!identifier) {
+        if (loginSubtitle) loginSubtitle.innerText = "ERROR: Falta parámetro 's' en la URL";
+        return;
+    }
+    
+    // Crear NEXUS_CONFIG
     if (typeof NEXUS_CONFIG === 'undefined') {
         window.NEXUS_CONFIG = {};
     }
     
-    // Resolver el Sheet ID desde el nombre
-    var resolvedShopId = identifier;
-    if (identifier && identifier.length < 30) {
-        var key = identifier.toLowerCase().trim();
-        if (typeof SHOP_MAPPING !== 'undefined' && SHOP_MAPPING[key]) {
-            resolvedShopId = SHOP_MAPPING[key];
+    var key = identifier.toLowerCase().trim();
+    var resolvedShopId = null;
+    var motorUrl = MOTOR_FALLBACK;
+    
+    // 1. Buscar en mapeo local
+    if (identifier.length < 30 && typeof SHOP_MAPPING !== 'undefined' && SHOP_MAPPING[key]) {
+        console.log(">>> Encontrado en mapeo local:", key);
+        resolvedShopId = SHOP_MAPPING[key];
+    }
+    // 2. Si es un Sheet ID directo (largo), usarlo directamente
+    else if (identifier.length > 30) {
+        console.log(">>> Usando como Sheet ID directo");
+        resolvedShopId = identifier;
+    }
+    // 3. Consultar al PCC (MasterController)
+    else {
+        console.log(">>> Consultando al PCC para:", key);
+        try {
+            var pccResponse = await fetch(PCC_URL, {
+                method: "POST",
+                body: JSON.stringify({ action: 'obtenerClientes' }),
+                redirect: "follow"
+            });
+            var pccText = await pccResponse.text();
+            console.log(">>> Respuesta PCC:", pccText.substring(0, 200));
+            
+            var pccData = JSON.parse(pccText);
+            if (pccData.clients) {
+                var cliente = pccData.clients.find(function(c) { 
+                    return c.nombre && c.nombre.toLowerCase().trim() === key; 
+                });
+                
+                if (cliente) {
+                    console.log(">>> Cliente encontrado en PCC:", cliente.nombre, cliente.sheetId);
+                    resolvedShopId = cliente.sheetId;
+                }
+            }
+        } catch(e) {
+            console.log(">>> Error consultando PCC:", e.message);
         }
     }
     
-    // Configurar todo
+    // Si no se encontró el ID, mostrar error
+    if (!resolvedShopId) {
+        console.log(">>> Tienda no encontrada:", key);
+        if (loginSubtitle) loginSubtitle.innerText = "ERROR: Tienda '" + identifier + "' no encontrada";
+        NexusDialog.alert("La tienda '" + identifier + "' no existe o no está registrada en el sistema.", "Tienda no encontrada");
+        return;
+    }
+    
+    console.log(">>> Sheet ID resuelto:", resolvedShopId);
+    
+    // Configurar NEXUS_CONFIG con el ID resuelto
     NEXUS_CONFIG.shopId = resolvedShopId;
     NEXUS_CONFIG.pccShopId = identifier;
-    NEXUS_CONFIG.API_URL = FALLBACK_URL;
+    NEXUS_CONFIG.API_URL = motorUrl;
     NEXUS_CONFIG.isReady = true;
     NEXUS_CONFIG.getShopId = function() { return this.shopId; };
     
     NEXUS_CONFIG.call = async function(action, data = {}) {
-        var url = this.API_URL || FALLBACK_URL;
+        var url = this.API_URL || MOTOR_FALLBACK;
         var payload = { shopId: this.shopId, action: action, ...data };
         
         var response = await fetch(url, {
@@ -319,10 +371,9 @@ window.onload = async () => {
         return JSON.parse(await response.text());
     };
     
-    var loginSubtitle = document.getElementById('loginSubtitle');
     if (loginSubtitle) loginSubtitle.innerHTML = '<span class="loader"></span> Conectando...';
     
-    var shopId = NEXUS_CONFIG.getShopId();
+    var shopId = resolvedShopId;
     
     
     if (shopId) {

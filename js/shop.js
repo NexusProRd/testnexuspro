@@ -5,7 +5,8 @@
 
 // Inicialización forzada para tienda
 (function() {
-    var FALLBACK_URL = "https://script.google.com/macros/s/AKfycbwr3K5qcSQvmEb1qhoeM0L9E26k1nSHTjmBdoehu3vRcssLltMInwM4AaWw34ZOuKEF/exec";
+    var PCC_URL = "https://script.google.com/macros/s/AKfycbxikMAM8onAKt8mDPS-VXfw5M3myiHMFfUbz3t_QaMWrU9V_qvO2ZoP-RD19N6qplnMwQ/exec";
+    var MOTOR_FALLBACK = "https://script.google.com/macros/s/AKfycbwr3K5qcSQvmEb1qhoeM0L9E26k1nSHTjmBdoehu3vRcssLltMInwM4AaWw34ZOuKEF/exec";
     
     var params = new URLSearchParams(window.location.search);
     var identifier = params.get('s') || "";
@@ -14,18 +15,36 @@
         window.NEXUS_CONFIG = {};
     }
     
-    // Resolver el Sheet ID desde el nombre
-    var resolvedShopId = identifier;
+    // Resolver el Sheet ID
+    var key = identifier.toLowerCase().trim();
+    var resolvedShopId = null;
+    
+    // 1. Buscar en mapeo local
     if (identifier && identifier.length < 30) {
-        var key = identifier.toLowerCase().trim();
         if (typeof SHOP_MAPPING !== 'undefined' && SHOP_MAPPING[key]) {
+            console.log(">>> Shop: Encontrado en mapeo local:", key);
             resolvedShopId = SHOP_MAPPING[key];
         }
     }
+    // 2. Si es Sheet ID directo
+    else if (identifier.length > 30) {
+        console.log(">>> Shop: Usando como Sheet ID directo");
+        resolvedShopId = identifier;
+    }
+    
+    // Si no está en mapeo local ni es ID directo, intentar PCC
+    if (!resolvedShopId && identifier.length < 30) {
+        console.log(">>> Shop: Consultando PCC para:", key);
+        // No podemos hacer fetch async aquí, así que usamos el nombre directamente
+        // y dejamos que cargarTienda maneje el error
+    }
+    
+    // Usar lo que tengamos
+    if (!resolvedShopId) resolvedShopId = identifier;
     
     NEXUS_CONFIG.shopId = resolvedShopId;
     NEXUS_CONFIG.pccShopId = identifier;
-    NEXUS_CONFIG.API_URL = FALLBACK_URL;
+    NEXUS_CONFIG.API_URL = MOTOR_FALLBACK;
     NEXUS_CONFIG.isReady = true;
     
     if (!NEXUS_CONFIG.getShopId) {
@@ -34,7 +53,7 @@
     
     if (!NEXUS_CONFIG.call) {
         NEXUS_CONFIG.call = async function(action, data = {}) {
-            var url = this.API_URL || FALLBACK_URL;
+            var url = this.API_URL || MOTOR_FALLBACK;
             var payload = { shopId: this.shopId, action: action, ...data };
             
             var response = await fetch(url, {
