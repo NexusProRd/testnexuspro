@@ -267,28 +267,41 @@ window.addEventListener('touchstart', resetInactivityTimer);
 // ==========================================
 window.onload = async () => {
     
+    var FALLBACK_URL = "https://script.google.com/macros/s/AKfycbwr3K5qcSQvmEb1qhoeM0L9E26k1nSHTjmBdoehu3vRcssLltMInwM4AaWw34ZOuKEF/exec";
+    
     // FORZAR inicialización si no está lista
     if (!NEXUS_CONFIG.isReady) {
         var params = new URLSearchParams(window.location.search);
-        var identifier = params.get('s');
+        var identifier = params.get('s') || params.get('shopId') || localStorage.getItem('nexus_shopId');
         
         if (identifier) {
-            // Usar fallback directamente
             NEXUS_CONFIG.shopId = identifier;
             NEXUS_CONFIG.pccShopId = identifier;
-            NEXUS_CONFIG.API_URL = "https://script.google.com/macros/s/AKfycbwr3K5qcSQvmEb1qhoeM0L9E26k1nSHTjmBdoehu3vRcssLltMInwM4AaWw34ZOuKEF/exec";
+            NEXUS_CONFIG.API_URL = FALLBACK_URL;
             NEXUS_CONFIG.isReady = true;
+        } else {
+            // Intentar obtener de sessionStorage
+            var savedShop = sessionStorage.getItem('shopId') || localStorage.getItem('shopId');
+            if (savedShop) {
+                NEXUS_CONFIG.shopId = savedShop;
+                NEXUS_CONFIG.pccShopId = savedShop;
+                NEXUS_CONFIG.API_URL = FALLBACK_URL;
+                NEXUS_CONFIG.isReady = true;
+            }
         }
     }
     
     // Esperar un poco más para asegurar
     await new Promise(r => setTimeout(r, 500));
     
+    var loginSubtitle = document.getElementById('loginSubtitle');
+    
     if (!NEXUS_CONFIG.isReady) {
-        var loginSubtitle = document.getElementById('loginSubtitle');
         if (loginSubtitle) loginSubtitle.innerText = "ERROR DE CONEXIÓN";
         return;
     }
+    
+    if (loginSubtitle) loginSubtitle.innerHTML = '<span class="loader"></span> Conectando...';
     
     var shopId = NEXUS_CONFIG.getShopId();
     
