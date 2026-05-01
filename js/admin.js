@@ -3,6 +3,20 @@
 // ==========================================
 
 // ==========================================
+// UTILIDADES DE SEGURIDAD
+// ==========================================
+function $(id) { return document.getElementById(id); }
+function $set(id, prop, val) { var el = document.getElementById(id); if (el) el[prop] = val; }
+function $show(id, show) { var el = document.getElementById(id); if (el) el.style.display = show ? 'block' : 'none'; }
+function $text(id, txt) { var el = document.getElementById(id); if (el) el.innerText = txt; }
+function $html(id, html) { var el = document.getElementById(id); if (el) el.innerHTML = html; }
+function $val(id, v) { var el = document.getElementById(id); if (el) el.value = v; }
+function $class(id, cls, add) { var el = document.getElementById(id); if (el) add ? el.classList.add(cls) : el.classList.remove(cls); }
+function $addClass(id, cls) { var el = document.getElementById(id); if (el) el.classList.add(cls); }
+function $removeClass(id, cls) { var el = document.getElementById(id); if (el) el.classList.remove(cls); }
+function $toggleClass(id, cls, cond) { var el = document.getElementById(id); if (el) el.classList.toggle(cls, cond); }
+
+// ==========================================
 // NOTIFICACIONES NATIVAS DEL NAVEGADOR
 // ==========================================
 async function requestNotificationPermission() {
@@ -236,7 +250,7 @@ function getBlockTimeRemaining() {
 // LOADING OVERLAY
 // ==========================================
 function showLoading(text = "Procesando...") {
-    document.getElementById('loadingText').innerText = text;
+    $text('loadingText', text);
     document.getElementById('loadingOverlay').classList.add('open');
 }
 
@@ -522,12 +536,12 @@ function formatRD(num) {
 function renderizarResumenInventario() {
     var data = calcularInventario();
 
-    document.getElementById('invTotalProductos').innerText = data.totalProductos;
-    document.getElementById('invStockTotal').innerText = data.stockTotal;
-    document.getElementById('invInversion').innerText = "RD$ " + formatRD(data.inversion);
-    document.getElementById('invGanancia').innerText = "RD$ " + formatRD(data.gananciaPotencial);
-    document.getElementById('invValor').innerText = "RD$ " + formatRD(data.valorInventario);
-    document.getElementById('invAgotados').innerText = data.agotados;
+    $text('invTotalProductos', data.totalProductos);
+    $text('invStockTotal', data.stockTotal);
+    $text('invInversion', "RD$ " + formatRD(data.inversion));
+    $text('invGanancia', "RD$ " + formatRD(data.gananciaPotencial));
+    $text('invValor', "RD$ " + formatRD(data.valorInventario));
+    $text('invAgotados', data.agotados);
 }
 
 // ==========================================
@@ -778,7 +792,7 @@ async function guardarEdicionProducto() {
             renderProductos();
         }
         closeEditModal();
-        document.getElementById("successMessage").innerText = "Producto actualizado.";
+        $text("successMessage", "Producto actualizado.");
         toggleModal("modalSuccess", true);
     } else {
         NexusDialog.alert(res.message || "Error al guardar.", "Error");
@@ -814,8 +828,10 @@ async function guardarProducto() {
     }
 
     const btn = document.getElementById("btnSaveProduct");
-    btn.innerText = "Guardando...";
-    btn.disabled = true;
+    if (btn) {
+        btn.innerText = "Guardando...";
+        btn.disabled = true;
+    }
 
     let imagen = document.getElementById("preview").src;
     if (file) {
@@ -847,14 +863,16 @@ async function guardarProducto() {
             renderProductos();
         }
         toggleModal("modalProduct", false);
-        document.getElementById("successMessage").innerText = id ? "Producto actualizado." : "Producto agregado.";
+        $text("successMessage", id ? "Producto actualizado." : "Producto agregado.");
         toggleModal("modalSuccess", true);
     } else {
         NexusDialog.alert(res.message || "Error al guardar.", "Error");
     }
 
-    btn.innerText = "Guardar Producto";
-    btn.disabled = false;
+    if (btn) {
+        btn.innerText = "Guardar Producto";
+        btn.disabled = false;
+    }
 }
 
 // ==========================================
@@ -872,7 +890,7 @@ async function eliminarProducto(id) {
             poblarDashboard();
             renderProductos();
         }
-        document.getElementById("successMessage").innerText = "Producto eliminado.";
+        $text("successMessage", "Producto eliminado.");
         toggleModal("modalSuccess", true);
     } else {
         NexusDialog.alert(res.message || "Error al eliminar.", "Error");
@@ -908,7 +926,7 @@ async function duplicarProducto(id) {
             appData = refreshData;
             renderProductos();
         }
-        document.getElementById("successMessage").innerText = "Producto duplicado.";
+        $text("successMessage", "Producto duplicado.");
         toggleModal("modalSuccess", true);
     }
 
@@ -1176,7 +1194,7 @@ async function guardarCupón() {
                 renderCupones();
             }
             toggleModal("modalCoupon", false);
-            document.getElementById("successMessage").innerText = "Cupón Regalo Único creado.";
+            $text("successMessage", "Cupón Regalo Único creado.");
             toggleModal("modalSuccess", true);
         } else {
             NexusDialog.alert(res.message || "Error al crear cupón.", "Error");
@@ -1214,7 +1232,7 @@ async function guardarCupón() {
             renderCupones();
         }
         toggleModal("modalCoupon", false);
-        document.getElementById("successMessage").innerText = "Cupón creado exitosamente.";
+        $text("successMessage", "Cupón creado exitosamente.");
         toggleModal("modalSuccess", true);
     } else {
         NexusDialog.alert(res.message || "Error al crear cupón.", "Error");
@@ -1251,7 +1269,7 @@ async function eliminarCupon(id) {
             appData = refreshData;
             renderCupones();
         }
-        document.getElementById("successMessage").innerText = "Cupón eliminado.";
+        $text("successMessage", "Cupón eliminado.");
         toggleModal("modalSuccess", true);
     }
 }
@@ -1348,7 +1366,7 @@ async function updateStatus(orderId, nuevoEstado) {
     hideLoading();
 
     if (res.success) {
-        document.getElementById("successMessage").innerText = `Orden ${nuevoEstado}.`;
+        $text("successMessage", `Orden ${nuevoEstado}.`);
         toggleModal("modalSuccess", true);
 
         // 🔄 REFRESCAR TODOS LOS DATOS: pedidos + productos (stock actualizado)
@@ -1455,7 +1473,7 @@ async function handleNotifAction(nuevoEstado) {
     hideLoading();
 
     if (res.success) {
-        document.getElementById("successMessage").innerText = `Orden #${currentNotifId} ${nuevoEstado === 'Confirmado' ? 'APROBADA' : 'RECHAZADA'}.`;
+        $text("successMessage", `Orden #${currentNotifId} ${nuevoEstado === 'Confirmado' ? 'APROBADA' : 'RECHAZADA'}.`);
         toggleModal("modalSuccess", true);
 
         // 🔄 REFRESCAR TODOS LOS DATOS: pedidos + productos (stock actualizado)
@@ -1778,7 +1796,7 @@ if (gananciaEl) {
 // MODALES DE PRODUCTO
 // ==========================================
 function openAddModal() {
-    document.getElementById("modalProductTitle").innerText = "Nuevo Producto";
+    $text("modalProductTitle", "Nuevo Producto");
     document.getElementById("editId").value = "";
     document.getElementById("pNombre").value = "";
     document.getElementById("pPrecio").value = "";
@@ -1886,7 +1904,7 @@ async function vincularYGuardar() {
         localStorage.setItem('nx_config_timestamp', Date.now());
         selectTheme(color);
         toggleModal("modalConfig", false);
-        document.getElementById("successMessage").innerText = "Configuración guardada.";
+        $text("successMessage", "Configuración guardada.");
         toggleModal("modalSuccess", true);
     } else {
         NexusDialog.alert(res.message || "Error al guardar en el servidor.", "Error");
@@ -1931,8 +1949,10 @@ async function saveWizard() {
     if (!wa)                      return NexusDialog.alert("El número de WhatsApp es obligatorio.", "Error");
 
     const btn = document.getElementById("btnWizSave");
-    btn.innerText = "Creando Tienda...";
-    btn.disabled = true;
+    if (btn) {
+        btn.innerText = "Creando Tienda...";
+        btn.disabled = true;
+    }
     
     var url = NEXUS_CONFIG.API_URL;
     var payload = { shopId: NEXUS_CONFIG.shopId, action: 'updateConfig', data: { pin: pin, nombre: nombre, eslogan: eslogan, categorias: categorias, wa: wa, sobre: sobre } };
@@ -1971,8 +1991,10 @@ async function saveWizard() {
             initPreloaded();
         } else {
             NexusDialog.alert(res.message || "Error al crear la tienda.", "Error");
-            btn.innerText = "Crear Tienda";
-            btn.disabled = false;
+            if (btn) {
+                btn.innerText = "Crear Tienda";
+                btn.disabled = false;
+            }
         }
     } catch(e) {
         console.error("Error saveWizard:", e);

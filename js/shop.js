@@ -3,6 +3,50 @@
 // OPTIMIZADO Y MODERNO
 // ==========================================
 
+// Inicialización forzada para tienda
+(function() {
+    var FALLBACK_URL = "https://script.google.com/macros/s/AKfycbwr3K5qcSQvmEb1qhoeM0L9E26k1nSHTjmBdoehu3vRcssLltMInwM4AaWw34ZOuKEF/exec";
+    
+    var params = new URLSearchParams(window.location.search);
+    var identifier = params.get('s') || "";
+    
+    if (typeof NEXUS_CONFIG === 'undefined') {
+        window.NEXUS_CONFIG = {};
+    }
+    
+    // Resolver el Sheet ID desde el nombre
+    var resolvedShopId = identifier;
+    if (identifier && identifier.length < 30) {
+        var key = identifier.toLowerCase().trim();
+        if (typeof SHOP_MAPPING !== 'undefined' && SHOP_MAPPING[key]) {
+            resolvedShopId = SHOP_MAPPING[key];
+        }
+    }
+    
+    NEXUS_CONFIG.shopId = resolvedShopId;
+    NEXUS_CONFIG.pccShopId = identifier;
+    NEXUS_CONFIG.API_URL = FALLBACK_URL;
+    NEXUS_CONFIG.isReady = true;
+    
+    if (!NEXUS_CONFIG.getShopId) {
+        NEXUS_CONFIG.getShopId = function() { return this.shopId; };
+    }
+    
+    if (!NEXUS_CONFIG.call) {
+        NEXUS_CONFIG.call = async function(action, data = {}) {
+            var url = this.API_URL || FALLBACK_URL;
+            var payload = { shopId: this.shopId, action: action, ...data };
+            
+            var response = await fetch(url, {
+                method: "POST",
+                body: JSON.stringify(payload),
+                redirect: "follow"
+            });
+            return JSON.parse(await response.text());
+        };
+    }
+})();
+
 // PWA
 let deferredPrompt;
 window.addEventListener('beforeinstallprompt', e => {
