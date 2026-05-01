@@ -1909,16 +1909,27 @@ async function saveWizard() {
     btn.innerText = "Creando Tienda...";
     btn.disabled = true;
 
-    const res = await NexusCore.ejecutar('updateConfig', { pin, nombre, eslogan, categorias, wa, sobre });
-    if (res.success) {
-        currentPin = pin;
-        localStorage.setItem("nx_session", "valid");
-        const refreshData = await NexusCore.ejecutar('getInitData');
-        if (refreshData.success) { appData = refreshData; }
-        toggleModal("modalWizard", false);
-        initPreloaded();
-    } else {
-        NexusDialog.alert(res.message || "Error al crear la tienda.", "Error");
+    console.log(">>> Guardando config, shopId:", NEXUS_CONFIG.shopId);
+    
+    try {
+        const res = await NexusCore.ejecutar('updateConfig', { pin, nombre, eslogan, categorias, wa, sobre });
+        console.log(">>> Respuesta updateConfig:", res);
+        
+        if (res.success) {
+            currentPin = pin;
+            localStorage.setItem("nx_session", "valid");
+            const refreshData = await NexusCore.ejecutar('getInitData');
+            if (refreshData.success) { appData = refreshData; }
+            toggleModal("modalWizard", false);
+            initPreloaded();
+        } else {
+            NexusDialog.alert(res.message || "Error al crear la tienda.", "Error");
+            btn.innerText = "Crear Tienda";
+            btn.disabled = false;
+        }
+    } catch(e) {
+        console.error(">>> Error saveWizard:", e);
+        NexusDialog.alert("Error: " + e.message, "Error");
         btn.innerText = "Crear Tienda";
         btn.disabled = false;
     }
