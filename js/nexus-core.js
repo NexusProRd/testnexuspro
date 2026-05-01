@@ -10,19 +10,18 @@ const NexusCore = {
             const resultado = await NEXUS_CONFIG.call(accion, datos);
 
             if (resultado.message === 'ACCESO_DENEGADO') {
+                NEXUS_CONFIG.isSuspended = true;
                 this.bloquearTienda();
                 return { success: false, message: 'ACCESO_DENEGADO' };
             }
 
             if (!resultado.success) {
-                console.error("Error en Motor Satelite:", resultado.message);
                 return { success: false, message: resultado.message };
             }
 
             return resultado;
 
         } catch (error) {
-            console.error("Error crítico de conexión:", error);
             return { success: false, message: "No se pudo conectar con el Motor Satelite." };
         }
     },

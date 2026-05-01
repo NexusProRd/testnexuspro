@@ -1,9 +1,22 @@
 // config.js - NEXUS PRO V6.0 - DINÁMICO CON PCC
+
+// ==========================================
+// MAPEO DE TIENDAS (Nombre → Sheet ID)
+// ==========================================
+const SHOP_MAPPING = {
+    "test": "1o6zJBNXyQVtv4AB3njrNGmKREB5zthCWpLao8gfGDr4",
+    "tienda1": "REEMPLAZA_CON_SHEET_ID_TIENDA1",
+    "tienda2": "REEMPLAZA_CON_SHEET_ID_TIENDA2"
+};
+
 const NEXUS_CONFIG = {
     // ==========================================
     // URL DEL MASTER CONTROLLER (PCC)
     // ==========================================
     PCC_URL: "https://script.google.com/macros/s/AKfycbxikMAM8onAKt8mDPS-VXfw5M3myiHMFfUbz3t_QaMWrU9V_qvO2ZoP-RD19N6qplnMwQ/exec",
+    
+    // URL del Motor Satelite (fallback si PCC no responde)
+    MOTOR_FALLBACK: "https://script.google.com/macros/s/AKfycbwr3K5qcSQvmEb1qhoeM0L9E26k1nSHTjmBdoehu3vRcssLltMInwM4AaWw34ZOuKEF/exec",
 
     // Variables dinámicas
     API_URL: null,
@@ -11,7 +24,7 @@ const NEXUS_CONFIG = {
     isReady: false,
     isSuspended: false,
 
-    // ==========================================
+// ==========================================
     // INICIALIZACIÓN ASÍNCRONA
     // ==========================================
     init: async function() {
@@ -23,38 +36,67 @@ const NEXUS_CONFIG = {
             return false;
         }
 
-        try {
-            // Primero: Obtener datos del cliente desde PCC
-            const clienteData = await this.obtenerDatosCliente(identifier);
-            
-            if (!clienteData.success) {
-                this.mostrarError("Tienda no encontrada", "La tienda no existe.");
-                return false;
-            }
-
-            if (clienteData.estado !== 'Activo') {
-                this.isSuspended = true;
-                this.bloquearTienda();
-                return false;
-            }
-
-            // Segundo: Obtener la URL del motor
-            const motorData = await this.obtenerUrlMotor(clienteData.motor);
-
-            // Configurar variables - shopId para PCC, sheetId para MotorSatelite
-            this.shopId = clienteData.sheetId;
-            this.pccShopId = clienteData.shopId;
-            this.API_URL = motorData || clienteData.motorUrl;
+        // 1. Primero buscar en mapeo local
+        const key = identifier.toLowerCase().trim();
+        if (SHOP_MAPPING[key]) {
+            this.shopId = SHOP_MAPPING[key];
+            this.pccShopId = identifier;
+            this.API_URL = this.MOTOR_FALLBACK;
             this.isReady = true;
-
-            console.log("NEXUS: Tienda configurada -", clienteData.nombre);
             return true;
-
-        } catch (error) {
-            console.error("NEXUS Error:", error);
-            this.mostrarError("Error de conexión", "No se pudo conectar con el servidor.");
-            return false;
         }
+
+        // 2. Si es un Sheet ID directo (largo), usarlo directamente
+        if (identifier.length > 30) {
+            this.shopId = identifier;
+            this.pccShopId = identifier;
+            this.API_URL = this.MOTOR_FALLBACK;
+            this.isReady = true;
+            return true;
+        }
+
+        // 3. Intentar PCC como último recurso
+        try {
+            const response = await fetch(this.PCC_URL, {
+                method: "POST",
+                body: JSON.stringify({ action: 'obtenerClientes' }),
+                redirect: "follow"
+            });
+
+            const text = await response.text();
+            const data = JSON.parse(text);
+
+            if (data.clients) {
+                const cliente = data.clients.find(c => 
+                    c.nombre && c.nombre.toLowerCase().trim() === key
+                );
+
+                if (cliente) {
+                    this.shopId = cliente.sheetId;
+                    this.pccShopId = cliente.id;
+                    
+                    const motorResponse = await fetch(this.PCC_URL, {
+                        method: "POST",
+                        body: JSON.stringify({ action: 'obtenerMotorPorNombre', nombre: cliente.motor }),
+                        redirect: "follow"
+                    });
+                    const motorData = JSON.parse(await motorResponse.text());
+                    
+                    this.API_URL = motorData.success ? motorData.url : this.MOTOR_FALLBACK;
+                    this.isReady = true;
+                    return true;
+                }
+            }
+        } catch (e) {
+            // Si falla, usar fallback
+        }
+
+        // Fallback: usar motor directo
+        this.shopId = identifier;
+        this.pccShopId = identifier;
+        this.API_URL = this.MOTOR_FALLBACK;
+        this.isReady = true;
+        return true;
     },
 
     // ==========================================
@@ -137,7 +179,6 @@ const NEXUS_CONFIG = {
             return null;
 
         } catch (error) {
-            console.error("Error obteniendo motor:", error);
             return null;
         }
     },
@@ -177,7 +218,6 @@ const NEXUS_CONFIG = {
     // ==========================================
     getShopId: function() {
         if (!this.isReady) {
-            console.error("NEXUS: Intentando usar shopId antes de inicializar");
             return "PENDIENTE";
         }
         return this.shopId;
@@ -202,11 +242,9 @@ const NEXUS_CONFIG = {
             shopId: self.getShopId(),
             pccShopId: self.pccShopId || self.getShopId(),
             pin: self.getPin(),
-            domain: window.location.href,
+            domain: window.location.host,
             data: data || {}
         };
-
-        console.log("NEXUS call:", action);
 
         return fetch(self.API_URL, {
             method: "POST",
@@ -215,7 +253,6 @@ const NEXUS_CONFIG = {
         }).then(function(response) {
             return response.text();
         }).then(function(text) {
-            console.log("Response:", text.substring(0, 150));
             try {
                 return JSON.parse(text);
             } catch(e) {
@@ -225,7 +262,6 @@ const NEXUS_CONFIG = {
                 return { success: false, message: "Error: " + text.substring(0, 100) };
             }
         })["catch"](function(error) {
-            console.error("Error:", error);
             return { success: false, message: "Error de conexión" };
         });
     }
