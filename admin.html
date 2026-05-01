@@ -1,0 +1,540 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Nexus Pro - Panel Admin</title>
+    <link rel="manifest" href="admin-manifest.json">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="css/admin-styles.css">
+    <script src="config.js"></script>
+    <script src="js/nexus-core.js"></script>
+    <base target="_blank">
+</head>
+<body class="bg-slate-950 text-slate-100 font-sans antialiased">
+
+    <!-- Loading Overlay -->
+    <div id="loadingOverlay" class="fixed inset-0 bg-slate-950/90 backdrop-blur-xl z-[9999] flex items-center justify-center flex-col gap-4">
+        <div class="relative">
+            <div class="w-16 h-16 border-4 border-slate-800 border-t-emerald-500 rounded-full animate-spin"></div>
+            <div class="absolute inset-2 w-12 h-12 border-4 border-emerald-500/20 border-b-emerald-500 rounded-full animate-spin" style="animation-duration: 1.5s; animation-direction: reverse;"></div>
+        </div>
+        <p class="text-emerald-400 text-sm font-semibold tracking-wide uppercase" id="loadingText">Cargando...</p>
+    </div>
+
+    <!-- Order Notification -->
+    <div id="orderNotification" class="fixed top-0 left-0 right-0 z-[5001] hidden transition-all duration-500 translate-y-0">
+        <div class="bg-gradient-to-r from-emerald-600 to-emerald-500 p-4 shadow-2xl border-b border-white/10">
+            <div class="max-w-4xl mx-auto flex items-center justify-between gap-4">
+                <div class="flex items-center gap-3 flex-1 min-w-0">
+                    <div class="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center flex-shrink-0 animate-pulse">
+                        <svg class="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" /></svg>
+                    </div>
+                    <div class="min-w-0">
+                        <p class="text-xs font-bold text-white/80 uppercase tracking-tight">Nuevo Pedido</p>
+                        <p id="notifSummary" class="text-sm font-bold text-white truncate">-</p>
+                        <p id="notifTotal" class="text-xs text-emerald-200 font-semibold">-</p>
+                    </div>
+                </div>
+                <div class="flex gap-2 flex-shrink-0">
+                    <button onclick="handleNotifAction('Cancelado')" class="w-10 h-10 rounded-full bg-white/20 hover:bg-white/30 flex items-center justify-center transition-all" title="Rechazar">
+                        <svg class="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+                    </button>
+                    <button onclick="handleNotifAction('Confirmado')" class="w-10 h-10 rounded-full bg-white/30 hover:bg-white/40 flex items-center justify-center transition-all" title="Aprobar">
+                        <svg class="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" /></svg>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- PWA Banner -->
+    <div id="pwaBanner" class="fixed top-0 left-0 right-0 bg-slate-900/95 backdrop-blur-xl z-[5000] hidden border-b border-slate-800">
+        <div class="flex items-center justify-between max-w-4xl mx-auto p-4">
+            <div class="flex items-center gap-3">
+                <div class="text-2xl">📱</div>
+                <div>
+                    <p class="text-xs font-bold text-white uppercase tracking-tight">Instalar Panel</p>
+                    <p class="text-[10px] text-slate-400 font-medium">Acceso directo</p>
+                </div>
+            </div>
+            <div class="flex gap-2">
+                <button onclick="dismissPWA()" class="px-4 py-2 text-xs font-semibold text-slate-400 uppercase">Ahora no</button>
+                <button onclick="installPWA()" class="px-5 py-2 bg-emerald-500 rounded-lg text-xs font-bold uppercase text-slate-950">Instalar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Login Section -->
+    <div id="loginSection" class="fixed inset-0 bg-slate-950 z-[1000] flex items-center justify-center p-4">
+        <div class="w-full max-w-sm">
+            <div class="text-center mb-8">
+                <h2 class="text-4xl font-black italic text-white mb-2">NEXUS <span class="text-emerald-500">PRO</span></h2>
+                <p id="loginSubtitle" class="text-slate-500 text-xs font-semibold uppercase tracking-[0.2em]">Iniciando...</p>
+            </div>
+            <div class="bg-slate-900/50 backdrop-blur-xl rounded-3xl p-8 border border-slate-800">
+                <div id="pinContainer" class="hidden">
+                    <div class="mb-6">
+                        <input type="password" id="pinInput" maxlength="4" placeholder="••••" disabled
+                               class="w-full bg-slate-950/50 p-6 rounded-2xl text-center text-3xl font-bold tracking-[1rem] outline-none border-2 border-slate-800 focus:border-emerald-500 transition-all text-slate-300">
+                        <div id="loginErrorContainer" class="mt-4 hidden">
+                            <p id="loginError" class="text-red-400 text-xs font-semibold text-center"></p>
+                            <a id="supportBtn" href="#" class="hidden mt-2 inline-block text-xs font-semibold text-emerald-500 text-center">Contactar Soporte</a>
+                        </div>
+                        <p class="text-[10px] text-slate-600 text-center mt-4 font-medium">PIN: 1234</p>
+                    </div>
+                    <p class="text-[10px] text-slate-500 text-center font-medium uppercase tracking-wide">Ingresa tu PIN</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Wizard Modal -->
+    <div id="modalWizard" class="fixed inset-0 bg-slate-950/95 backdrop-blur-xl z-[2000] hidden items-center justify-center p-4">
+        <div class="bg-slate-900 w-full max-w-md rounded-3xl p-6 border border-slate-800 shadow-2xl max-h-[90vh] overflow-y-auto">
+            <h2 class="text-2xl font-black text-white mb-1">¡Bienvenido! 🚀</h2>
+            <p class="text-xs font-semibold text-slate-500 mb-6 uppercase tracking-widest">Configuración Inicial</p>
+            <div class="space-y-4">
+                <div class="bg-slate-950 p-4 rounded-2xl border border-slate-800">
+                    <label class="text-[10px] font-bold text-emerald-500 uppercase block mb-3">PIN de Acceso</label>
+                    <div class="space-y-3">
+                        <input id="wizPin" type="password" maxlength="4" class="w-full bg-slate-900 p-3 rounded-xl text-white text-center font-bold tracking-[0.5rem]" placeholder="0000">
+                        <input id="wizPinConfirm" type="password" maxlength="4" class="w-full bg-slate-900 p-3 rounded-xl text-white text-center font-bold tracking-[0.5rem]" placeholder="Confirmar">
+                    </div>
+                </div>
+                <input id="wizNombre" type="text" class="w-full bg-slate-950 p-4 rounded-2xl text-sm font-medium border border-slate-800" placeholder="Nombre de la Tienda">
+                <input id="wizWA" type="text" class="w-full bg-slate-950 p-4 rounded-2xl text-sm font-medium border border-slate-800" placeholder="WhatsApp (ej: 18290000000)">
+                <input id="wizCategorias" type="text" class="w-full bg-slate-950 p-4 rounded-2xl text-sm font-medium border border-slate-800" placeholder="Categorías separadas por coma">
+                <input id="wizEslogan" type="text" class="w-full bg-slate-950 p-4 rounded-2xl text-sm font-medium border border-slate-800" placeholder="Eslogan">
+                <textarea id="wizSobre" class="w-full bg-slate-950 p-4 rounded-2xl text-sm h-20 border border-slate-800" placeholder="Sobre nosotros..."></textarea>
+                <button onclick="saveWizard()" id="btnWizSave" class="w-full bg-emerald-500 p-4 rounded-2xl font-bold text-sm text-slate-950 uppercase">Crear Tienda</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="adminContent" style="display: none;">
+        <!-- Sidebar Desktop -->
+        <aside id="sidebarNav" class="sidebar">
+            <div class="sidebar-header">
+                <span class="sidebar-logo">NEXUS PRO</span>
+            </div>
+            <nav class="sidebar-nav">
+                <button onclick="switchTab('analytics')" id="tab-analytics" class="sidebar-link">
+                    <svg class="sidebar-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 20V10M12 20V4M6 20v-6"/></svg>
+                    Analytics
+                </button>
+                <button onclick="switchTab('productos')" id="tab-productos" class="sidebar-link">
+                    <svg class="sidebar-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>
+                    Inventario
+                </button>
+                <button onclick="switchTab('pedidos')" id="tab-pedidos" class="sidebar-link relative">
+                    <svg class="sidebar-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
+                    Pedidos
+                    <span id="badge-pedidos" class="hidden"></span>
+                </button>
+                <button onclick="switchTab('cupones')" id="tab-cupones" class="sidebar-link">
+                    <svg class="sidebar-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>
+                    Cupones
+                </button>
+            </nav>
+            <div class="sidebar-footer">
+                <button onclick="logout()" class="sidebar-link text-red-400">
+                    <svg class="sidebar-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+                    Salir
+                </button>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Header -->
+            <header class="admin-header">
+                <div class="header-content">
+                    <div>
+                        <p class="text-[10px] uppercase font-semibold text-emerald-400/80 tracking-widest">Administrador</p>
+                        <h1 id="displayTienda" class="text-xl font-black text-white italic">Mi Tienda</h1>
+                    </div>
+                    <div class="header-actions">
+                        <button onclick="toggleMaintenanceMode()" id="maintenanceBtn" class="header-btn" title="Mantenimiento">
+                            <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>
+                        </button>
+                        <button onclick="abrirConfig()" class="header-btn">
+                            <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+                        </button>
+                    </div>
+                </div>
+                <div id="maintenanceBadge" class="hidden maintenance-badge">
+                    <span>🔒 Mantenimiento Activo</span>
+                </div>
+            </header>
+
+            <!-- Mobile Nav -->
+            <nav class="mobile-nav" id="mainNav">
+                <button onclick="switchTab('analytics')" id="tab-analytics-mobile" class="mobile-nav-link">📊 Analytics</button>
+                <button onclick="switchTab('productos')" id="tab-productos-mobile" class="mobile-nav-link">📦 Inventario</button>
+                <button onclick="switchTab('pedidos')" id="tab-pedidos-mobile" class="mobile-nav-link relative">📋 Pedidos<span id="badge-pedidos-mobile" class="hidden"></span></button>
+                <button onclick="switchTab('cupones')" id="tab-cupones-mobile" class="mobile-nav-link">🎫 Cupones</button>
+            </nav>
+
+            <!-- Analytics View -->
+            <section id="view-analytics" class="view-section hidden">
+                <div class="analytics-filters">
+                    <button onclick="loadAnalyticsData('semana')" id="filter-semana" class="filter-btn active">Semana</button>
+                    <button onclick="loadAnalyticsData('mes')" id="filter-mes" class="filter-btn">Mes</button>
+                    <button onclick="loadAnalyticsData('anio')" id="filter-anio" class="filter-btn">Año</button>
+                </div>
+                <div class="analytics-chart">
+                    <h3 class="section-title">📊 Ventas</h3>
+                    <div id="salesChart" class="chart-container"></div>
+                </div>
+                <div class="stats-grid">
+                    <div class="stat-card stat-emerald">
+                        <span class="stat-label">Ventas</span>
+                        <span class="stat-value" id="analyticsTotalSales">RD$ 0</span>
+                    </div>
+                    <div class="stat-card stat-blue">
+                        <span class="stat-label">Pedidos</span>
+                        <span class="stat-value" id="analyticsTotalOrders">0</span>
+                    </div>
+                    <div class="stat-card stat-purple">
+                        <span class="stat-label">Ganancia</span>
+                        <span class="stat-value" id="analyticsTotalGanancia">RD$ 0</span>
+                    </div>
+                </div>
+                <div class="top-products">
+                    <h3 class="section-title">🔥 Top Productos</h3>
+                    <div id="topProductsList" class="top-products-list"></div>
+                </div>
+            </section>
+
+            <!-- Products View -->
+            <section id="view-productos" class="view-section hidden">
+                <div class="inventory-stats" id="inventorySummary">
+                    <div class="inv-stat">
+                        <span class="inv-label">Productos</span>
+                        <span class="inv-value" id="invTotalProductos">0</span>
+                    </div>
+                    <div class="inv-stat">
+                        <span class="inv-label">Stock Total</span>
+                        <span class="inv-value" id="invStockTotal">0</span>
+                    </div>
+                    <div class="inv-stat">
+                        <span class="inv-label">Inversión</span>
+                        <span class="inv-value" id="invInversion">RD$ 0</span>
+                    </div>
+                    <div class="inv-stat positive">
+                        <span class="inv-label">Ganancia Pot.</span>
+                        <span class="inv-value" id="invGanancia">RD$ 0</span>
+                    </div>
+                    <div class="inv-stat warning">
+                        <span class="inv-label">Valor Inventario</span>
+                        <span class="inv-value" id="invValor">RD$ 0</span>
+                    </div>
+                    <div class="inv-stat negative">
+                        <span class="inv-label">Agotados</span>
+                        <span class="inv-value" id="invAgotados">0</span>
+                    </div>
+                </div>
+
+                <div class="filters-bar">
+                    <input type="text" id="searchInput" placeholder="Buscar..." oninput="applyFilters()"
+                           class="filter-input">
+                    <select id="categoryFilter" onchange="applyFilters()" class="filter-select">
+                        <option value="Todas">Todas</option>
+                    </select>
+                    <select id="statusFilter" onchange="applyFilters()" class="filter-select">
+                        <option value="Todos">Todos</option>
+                        <option value="Publicado">Publicados</option>
+                        <option value="Archivado">Archivados</option>
+                    </select>
+                </div>
+                <div id="listaProductos" class="products-list"></div>
+            </section>
+
+            <!-- Orders View -->
+            <section id="view-pedidos" class="view-section hidden">
+                <div class="order-filters" id="orderFilters">
+                    <button onclick="setOrderFilter('Todos')" id="filter-Todos" class="order-filter-btn active">Todos</button>
+                    <button onclick="setOrderFilter('Pendiente')" id="filter-Pendiente" class="order-filter-btn">Pendientes</button>
+                    <button onclick="setOrderFilter('Confirmado')" id="filter-Confirmado" class="order-filter-btn">Cobrados</button>
+                    <button onclick="setOrderFilter('Cancelado')" id="filter-Cancelado" class="order-filter-btn">Rechazados</button>
+                </div>
+                <div id="listaPedidos" class="orders-list"></div>
+            </section>
+
+            <!-- Coupons View -->
+            <section id="view-cupones" class="view-section hidden">
+                <button onclick="openCouponModal()" class="create-coupon-btn">
+                    <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                    Crear Cupón
+                </button>
+                <div id="listaCupones" class="coupons-list"></div>
+            </section>
+        </main>
+
+        <!-- Floating Add Button -->
+        <button id="btnAddFloat" onclick="openAddModal()" class="fab-btn">
+            <svg class="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        </button>
+
+        <!-- Modals -->
+        <!-- Config Modal -->
+        <div id="modalConfig" class="modal-overlay" onclick="if(event.target === this) toggleModal('modalConfig', false)">
+            <div class="modal-content">
+                <h3 class="modal-title">⚙️ Configuración</h3>
+                <div class="modal-body space-y-4">
+                    <div class="form-group">
+                        <label class="form-label">Cambiar PIN</label>
+                        <div class="grid grid-cols-2 gap-3">
+                            <input id="cfgPin" type="password" maxlength="4" class="form-input" placeholder="Nuevo">
+                            <input id="cfgPinConfirm" type="password" maxlength="4" class="form-input" placeholder="Confirmar">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Paleta de Marca</label>
+                        <div class="theme-grid" id="themeSelector">
+                            <div onclick="selectTheme('#10b981')" class="theme-option" data-color="#10b981">🌿</div>
+                            <div onclick="selectTheme('#0f172a')" class="theme-option" data-color="#0f172a">🌑</div>
+                            <div onclick="selectTheme('#6366f1')" class="theme-option" data-color="#6366f1">💎</div>
+                            <div onclick="selectTheme('#f43f5e')" class="theme-option" data-color="#f43f5e">🔥</div>
+                            <div onclick="selectTheme('#f59e0b')" class="theme-option" data-color="#f59e0b">☀️</div>
+                            <div onclick="selectTheme('#8b5cf6')" class="theme-option" data-color="#8b5cf6">🔮</div>
+                        </div>
+                    </div>
+                    <div class="form-group"><label class="form-label">Nombre Tienda</label><input id="cfgNombre" type="text" class="form-input"></div>
+                    <div class="form-group"><label class="form-label">Eslogan</label><input id="cfgEslogan" type="text" class="form-input"></div>
+                    <div class="form-group"><label class="form-label">Categorías</label><input id="cfgCategorias" type="text" class="form-input"></div>
+                    <div class="form-group"><label class="form-label">WhatsApp</label><input id="cfgWA" type="text" class="form-input"></div>
+                    <div class="toggle-group">
+                        <label class="toggle-label">
+                            <input type="checkbox" id="cfgSound" class="toggle-input">
+                            <span class="toggle-switch"></span>
+                            🔊 Sonido
+                        </label>
+                        <label class="toggle-label">
+                            <input type="checkbox" id="cfgVibrate" class="toggle-input">
+                            <span class="toggle-switch"></span>
+                            📳 Vibrar
+                        </label>
+                    </div>
+                    <div class="toggle-group">
+                        <label class="toggle-label warning">
+                            <input type="checkbox" id="cfgModoFeria" class="toggle-input">
+                            <span class="toggle-switch"></span>
+                            🎪 Modo Feria
+                        </label>
+                        <label class="toggle-label danger">
+                            <input type="checkbox" id="cfgMaintenance" class="toggle-input">
+                            <span class="toggle-switch"></span>
+                            🔧 Mantenimiento
+                        </label>
+                    </div>
+                    <div class="form-group"><label class="form-label">Sobre Nosotros</label><textarea id="cfgSobre" class="form-input h-20"></textarea></div>
+                    <button id="btnConfigSave" onclick="vincularYGuardar()" class="btn-primary w-full">Guardar Cambios</button>
+                    <button onclick="triggerReset()" class="btn-danger w-full">⚠️ Resetear Todo</button>
+                    <button onclick="toggleModal('modalConfig', false)" class="btn-ghost w-full">Cerrar</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Product Modal -->
+        <div id="modalProduct" class="modal-overlay" onclick="if(event.target === this) toggleModal('modalProduct', false)">
+            <div class="modal-content">
+                <h3 id="modalProductTitle" class="modal-title">📦 Producto</h3>
+                <input type="hidden" id="editId">
+                <div class="modal-body space-y-4">
+                    <div class="image-upload">
+                        <img id="preview" src="https://cdn-icons-png.flaticon.com/512/685/685655.png" class="preview-img">
+                        <label class="upload-btn">
+                            Cambiar
+                            <input type="file" id="fileInput" accept="image/*" class="hidden" onchange="previewImg(event)">
+                        </label>
+                    </div>
+                    <input id="pNombre" type="text" class="form-input" placeholder="Nombre del producto">
+                    <select id="pCategoria" class="form-input"><option value="General">General</option></select>
+                    <div class="grid grid-cols-2 gap-3">
+                        <div class="form-group"><label class="form-label">Precio</label><input id="pPrecio" type="number" class="form-input"></div>
+                        <div class="form-group"><label class="form-label">Costo</label><input id="pCosto" type="number" class="form-input"></div>
+                    </div>
+                    <div class="form-group"><label class="form-label">Stock</label><input id="pStock" type="number" class="form-input"></div>
+                    <select id="pEstado" class="form-input">
+                        <option value="Publicado">✅Publicado</option>
+                        <option value="Archivado">📁Archivado</option>
+                    </select>
+                    <textarea id="pDetalle" class="form-input h-20" placeholder="Descripción..."></textarea>
+                    
+                    <!-- Coupon Section -->
+                    <div class="coupon-section-modal">
+                        <label class="toggle-label">
+                            <input type="checkbox" id="hasCoupon" onchange="toggleCouponSection()">
+                            <span class="toggle-switch"></span>
+                            🎫 ¿Cupón de producto?
+                        </label>
+                        <div id="couponFields" class="hidden space-y-3 mt-3">
+                            <div class="flex gap-2">
+                                <input type="text" id="pCouponCode" class="form-input flex-1" placeholder="Código">
+                                <button type="button" onclick="generateRandomCoupon()" class="btn-secondary">🎲</button>
+                            </div>
+                            <select id="pCouponType" class="form-input">
+                                <option value="porcentaje">% Porcentaje</option>
+                                <option value="monto">💵 Monto</option>
+                                <option value="gratis">🎁 Gratis</option>
+                            </select>
+                            <div class="grid grid-cols-2 gap-3">
+                                <input type="number" id="pCouponValue" class="form-input" placeholder="Valor">
+                                <input type="number" id="pCouponLimit" class="form-input" placeholder="Límite">
+                            </div>
+                            <input type="text" id="pCouponMessage" class="form-input" placeholder="Mensaje sorpresa">
+                        </div>
+                    </div>
+
+                    <button onclick="guardarProducto()" class="btn-primary w-full">Guardar</button>
+                    <button onclick="toggleModal('modalProduct', false)" class="btn-ghost w-full">Cancelar</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Edit Product Modal -->
+        <div id="modalEditProduct" class="modal-overlay">
+            <div class="modal-content">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="modal-title">✏️ Editar Producto</h3>
+                    <button onclick="closeEditModal()" class="close-btn">✕</button>
+                </div>
+                <input type="hidden" id="editProductId">
+                <div class="modal-body space-y-4">
+                    <div class="image-upload">
+                        <img id="editPreview" class="preview-img">
+                        <label class="upload-btn">
+                            Cambiar
+                            <input type="file" id="editFileInput" accept="image/*" class="hidden" onchange="previewEditImg(event)">
+                        </label>
+                    </div>
+                    <input id="editNombre" type="text" class="form-input" placeholder="Nombre">
+                    <select id="editCategoria" class="form-input"></select>
+                    <div class="grid grid-cols-2 gap-3">
+                        <div class="form-group"><label class="form-label">Precio</label><input id="editPrecio" type="number" class="form-input"></div>
+                        <div class="form-group"><label class="form-label">Costo</label><input id="editCosto" type="number" class="form-input"></div>
+                    </div>
+                    <div class="form-group"><label class="form-label">Stock</label><input id="editStock" type="number" class="form-input"></div>
+                    <select id="editEstado" class="form-input">
+                        <option value="Publicado">✅Publicado</option>
+                        <option value="Archivado">📁Archivado</option>
+                    </select>
+                    <textarea id="editDetalle" class="form-input h-20" placeholder="Descripción..."></textarea>
+                    
+                    <div class="coupon-section-modal">
+                        <label class="toggle-label">
+                            <input type="checkbox" id="editHasCoupon" onchange="toggleEditCouponSection()">
+                            <span class="toggle-switch"></span>
+                            🎫 ¿Cupón?
+                        </label>
+                        <div id="editCouponFields" class="hidden space-y-3 mt-3">
+                            <input type="hidden" id="editCouponId">
+                            <div class="flex gap-2">
+                                <input type="text" id="editCouponCode" class="form-input flex-1" placeholder="Código">
+                                <button type="button" onclick="generateEditRandomCoupon()" class="btn-secondary">🎲</button>
+                            </div>
+                            <select id="editCouponType" class="form-input">
+                                <option value="porcentaje">% Descuento</option>
+                                <option value="monto">💵 Monto</option>
+                                <option value="gratis">🎁 Gratis</option>
+                            </select>
+                            <div class="grid grid-cols-2 gap-3">
+                                <input type="number" id="editCouponValue" class="form-input" placeholder="Valor">
+                                <input type="number" id="editCouponLimit" class="form-input" placeholder="Límite">
+                            </div>
+                            <input type="text" id="editCouponMessage" class="form-input" placeholder="Mensaje">
+                        </div>
+                    </div>
+
+                    <button onclick="guardarEdicionProducto()" class="btn-primary w-full">Guardar Cambios</button>
+                    <button onclick="closeEditModal()" class="btn-ghost w-full">Cancelar</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Coupon Modal -->
+        <div id="modalCoupon" class="modal-overlay" onclick="if(event.target === this) toggleModal('modalCoupon', false)">
+            <div class="modal-content">
+                <h3 class="modal-title">🎫 Crear Cupón</h3>
+                <div class="modal-body space-y-4">
+                    <div class="coupon-type-btns">
+                        <button onclick="setCouponType('descuento')" id="btnCouponDescuento" class="type-btn active">Descuento</button>
+                        <button onclick="setCouponType('giftcard')" id="btnCouponGiftcard" class="type-btn">Gift Card</button>
+                        <button onclick="setCouponType('regalo_unico')" id="btnCouponRegaloUnico" class="type-btn">🎁 Regalo</button>
+                    </div>
+                    <input type="hidden" id="couponType" value="descuento">
+                    <input id="couponCode" type="text" class="form-input uppercase" placeholder="Código">
+                    <button onclick="generateCouponCode()" class="btn-secondary w-full">🎲 Generar Código</button>
+                    <input id="couponNombre" type="text" class="form-input" placeholder="Nombre">
+                    <select id="couponDiscountType" class="form-input">
+                        <option value="porcentaje">% Porcentaje</option>
+                        <option value="monto">💵 Monto Fijo</option>
+                    </select>
+                    <div class="grid grid-cols-2 gap-3">
+                        <input id="couponValue" type="number" class="form-input" placeholder="Valor">
+                        <input id="couponLimit" type="number" class="form-input" placeholder="Límite usos">
+                    </div>
+                    
+                    <div id="regaloUnicoFields" class="hidden space-y-3">
+                        <p class="text-xs text-purple-400 font-bold text-center">🎁 Cupón Regalo Único</p>
+                        <input id="buscadorProducto" type="text" class="form-input" placeholder="Buscar producto..." onkeyup="filtrarProductosRegalo()">
+                        <select id="couponProducto" size="4" class="form-input" onchange="seleccionarProductoRegalo()"></select>
+                        <input type="hidden" id="couponProductoId">
+                        <div id="productoSeleccionado" class="hidden bg-purple-900/30 p-3 rounded-lg">
+                            <p class="text-xs text-purple-400 font-bold">✅ Seleccionado: <span id="nombreProductoSeleccionado" class="text-white"></span></p>
+                        </div>
+                        <input id="couponMensaje" type="text" class="form-input" placeholder="Mensaje sorpresa">
+                        <p class="text-[10px] text-slate-500 text-center">⚠️ Se autodestruirá al usar</p>
+                    </div>
+
+                    <button onclick="guardarCupón()" id="btnSaveCoupon" class="btn-primary w-full">Crear Cupón</button>
+                    <button onclick="toggleModal('modalCoupon', false)" class="btn-ghost w-full">Cancelar</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Success Modal -->
+        <div id="modalSuccess" class="modal-overlay" onclick="if(event.target === this) toggleModal('modalSuccess', false)">
+            <div class="modal-content text-center">
+                <div class="text-5xl mb-4">✅</div>
+                <p id="successMessage" class="text-lg font-bold text-white mb-4"></p>
+                <button onclick="toggleModal('modalSuccess', false)" class="btn-primary w-full">Aceptar</button>
+            </div>
+        </div>
+
+        <!-- Dialog Modal -->
+        <div id="modalDialog" class="modal-overlay" onclick="if(event.target === this) NexusDialog.close(false)">
+            <div class="modal-content">
+                <p id="dialogTitle" class="text-lg font-bold text-white mb-2"></p>
+                <p id="dialogMsg" class="text-sm text-slate-400 mb-4"></p>
+                <input id="dialogInput" type="text" class="form-input mb-4 hidden">
+                <div class="flex gap-3">
+                    <button id="btnDialogCancel" onclick="NexusDialog.close(false)" class="btn-secondary flex-1">Cancelar</button>
+                    <button onclick="NexusDialog.submit()" class="btn-primary flex-1">Confirmar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/admin.js"></script>
+    <script>
+        // Fallback para cerrar loading si algo falla
+        setTimeout(function() {
+            var loading = document.getElementById('loadingOverlay');
+            if (loading && loading.classList.contains('open')) {
+                loading.style.display = 'none';
+            }
+            // También buscar por clase fixed
+            var overlays = document.querySelectorAll('.fixed.inset-0.z-\\[9999\\]');
+            overlays.forEach(function(el) {
+                el.style.display = 'none';
+            });
+        }, 5000);
+    </script>
+</body>
+</html>
