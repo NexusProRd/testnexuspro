@@ -1637,6 +1637,11 @@ async function updateStatus(orderId, nuevoEstado) {
             
             if (typeof renderProductos === 'function') renderProductos();
             if (typeof poblarDashboard === 'function') poblarDashboard();
+            
+            // Refrescar gráfica si estamos en la pestaña de Analytics
+            if (currentTab === 'analytics') {
+                loadAnalyticsData(typeof analyticsFilter !== 'undefined' ? analyticsFilter : 'semana');
+            }
         } else {
             console.log(">>> Error al refresh:", refreshData.message);
         }
@@ -1740,12 +1745,17 @@ async function handleNotifAction(nuevoEstado) {
         toggleModal("modalSuccess", true);
 
         // 🔄 REFRESCAR TODOS LOS DATOS: pedidos + productos (stock actualizado)
-        const refreshData = await NexusCore.ejecutar('getInitData');
-        if (refreshData.success) {
-            appData = refreshData;
+        const refreshData = await NexusCore.ejecutar('getOrdersOnly');
+        if (refreshData.success && refreshData.pedidos) {
+            appData.pedidos = refreshData.pedidos;
             renderPedidos();
-            renderProductos();        // ← Actualiza stock en inventario
-            poblarDashboard();        // ← Actualiza resumen si aplica
+            if (typeof renderProductos === 'function') renderProductos();
+            if (typeof poblarDashboard === 'function') poblarDashboard();
+            
+            // Refrescar gráfica si estamos en la pestaña de Analytics
+            if (currentTab === 'analytics') {
+                loadAnalyticsData(typeof analyticsFilter !== 'undefined' ? analyticsFilter : 'semana');
+            }
         }
     } else {
         NexusDialog.alert(res.message || "Error al procesar.", "Error");
