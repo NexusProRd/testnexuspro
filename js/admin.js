@@ -537,6 +537,11 @@ function cargarPanel() {
         renderPedidos();
     }
     
+    // Mostrar analytics por defecto al iniciar
+    if (typeof switchTab === 'function') {
+        setTimeout(function() { switchTab('analytics'); }, 100);
+    }
+    
     // Iniciar polling para nuevos pedidos
     iniciarPollingPedidos();
 }
