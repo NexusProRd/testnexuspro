@@ -196,8 +196,15 @@ async function cargarTienda() {
         var tieneProductos = res.productos && res.productos.length > 0;
         console.log(">>> Tiene Nombre:", tieneNombre, "Tiene Productos:", tieneProductos);
         
-        // Si no tiene nombre NI productos, mostrar mantenimiento
-        if (!tieneNombre && !tieneProductos) {
+        // Solo mostrar mantenimiento si está explícitamente configurado
+        var modoMantenimiento = res.config && (res.config.Modo_Mantenimiento === 'true' || res.config.Modo_Mantenimiento === true);
+        
+        if (!tieneNombre && !tieneProductos && !modoMantenimiento) {
+            // No tiene datos pero tampoco está en mantenimiento - iniciar wizard
+            console.log(">>> Tienda sin configurar, esperando...");
+        }
+        
+        if (modoMantenimiento) {
             var maintenanceEl = document.getElementById("maintenanceScreen");
             if (maintenanceEl) maintenanceEl.style.display = 'flex';
             return;

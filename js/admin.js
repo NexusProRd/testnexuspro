@@ -1439,12 +1439,24 @@ function setOrderFilter(filtro) {
 }
 
 function renderPedidos() {
+    console.log(">>> renderPedidos llamado, appData:", appData);
     const container = document.getElementById("listaPedidos");
     
-    if (!container) return;
+    if (!container) {
+        console.log(">>> Contenedor listaPedidos no encontrado");
+        return;
+    }
     
     // Mostrar indicador de carga
     container.innerHTML = '<div class="text-center p-10 text-slate-400"><div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-emerald-500 mb-2"></div><p class="text-xs font-bold">Cargando pedidos...</p></div>';
+    
+    if (!appData) {
+        console.log(">>> appData no existe");
+        container.innerHTML = '<div class="text-center p-10 text-slate-400">No hay datos</div>';
+        return;
+    }
+    
+    console.log(">>> Pedidos:", appData.pedidos);
     
     const counts = {
         'Todos':      appData.pedidos?.length || 0,
