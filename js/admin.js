@@ -533,9 +533,14 @@ function cargarPanel() {
         loadAnalyticsData('semana');
     }
     
-    // También cargar pedidos
+    // Cargar pedidos solo después de tener datos
     if (typeof renderPedidos === 'function') {
-        renderPedidos();
+        NexusCore.ejecutar('getInitData').then(function(res) {
+            if (res && res.success) {
+                appData = res;
+            }
+            renderPedidos();
+        });
     }
     
     // Mostrar analytics por defecto al iniciar
@@ -1485,7 +1490,16 @@ function setOrderFilter(filtro) {
     });
     document.getElementById(`filter-${filtro}`).className =
         "whitespace-nowrap px-4 py-2 rounded-full text-[10px] font-black uppercase bg-slate-800 text-white shadow-md";
-    renderPedidos();
+    if (appData && appData.pedidos && appData.pedidos.length > 0) {
+        renderPedidos();
+    } else {
+        NexusCore.ejecutar('getInitData').then(function(res) {
+            if (res && res.success) {
+                appData = res;
+            }
+            renderPedidos();
+        });
+    }
 }
 
 function renderPedidos() {

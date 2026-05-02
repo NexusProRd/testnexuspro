@@ -3,83 +3,6 @@
 // OPTIMIZADO Y MODERNO
 // ==========================================
 
-// Inicialización forzada para tienda
-(function() {
-    var PCC_URL = "https://script.google.com/macros/s/AKfycbxikMAM8onAKt8mDPS-VXfw5M3myiHMFfUbz3t_QaMWrU9V_qvO2ZoP-RD19N6qplnMwQ/exec";
-    var MOTOR_FALLBACK = "https://script.google.com/macros/s/AKfycbwr3K5qcSQvmEb1qhoeM0L9E26k1nSHTjmBdoehu3vRcssLltMInwM4AaWw34ZOuKEF/exec";
-    
-    var params = new URLSearchParams(window.location.search);
-    var identifier = params.get('s') || "";
-    
-    if (typeof NEXUS_CONFIG === 'undefined') {
-        window.NEXUS_CONFIG = {};
-    }
-    
-    // Resolver el Sheet ID
-    var key = identifier.toLowerCase().trim();
-    var resolvedShopId = null;
-    
-    // 1. Buscar en mapeo local
-    if (identifier && identifier.length < 30) {
-        if (typeof SHOP_MAPPING !== 'undefined' && SHOP_MAPPING[key]) {
-            console.log(">>> Shop: Encontrado en mapeo local:", key);
-            resolvedShopId = SHOP_MAPPING[key];
-        }
-    }
-    // 2. Si es Sheet ID directo
-    else if (identifier.length > 30) {
-        console.log(">>> Shop: Usando como Sheet ID directo");
-        resolvedShopId = identifier;
-    }
-    
-    // Verificar si hay datos en cache para usar como fallback
-    var cachedConfig = getCacheData('nx_config');
-    var cachedProds = getCacheData('nx_productos');
-    var tieneCache = cachedConfig && cachedConfig.Nombre_Tienda && cachedProds && cachedProds.length > 0;
-    
-    // Si no está en mapeo local ni es ID directo
-    if (!resolvedShopId && identifier.length < 30) {
-        if (tieneCache) {
-            console.log(">>> Shop: Usando cache local, servidor no disponible");
-        } else {
-            console.log(">>> Shop: Tienda no encontrada en mapeo:", key);
-            NEXUS_CONFIG.isReady = false;
-            var maintenanceEl = document.getElementById("maintenanceScreen");
-            if (maintenanceEl) maintenanceEl.style.display = 'flex';
-        }
-    }
-    
-    // Usar cache si no hay shopId válido
-    if (!resolvedShopId || resolvedShopId === identifier) {
-        if (tieneCache) {
-            resolvedShopId = "cached";
-        }
-    }
-    
-    NEXUS_CONFIG.shopId = resolvedShopId || "cached";
-    NEXUS_CONFIG.pccShopId = identifier;
-    NEXUS_CONFIG.API_URL = MOTOR_FALLBACK;
-    NEXUS_CONFIG.isReady = tieneCache || !!resolvedShopId;
-    
-    if (!NEXUS_CONFIG.getShopId) {
-        NEXUS_CONFIG.getShopId = function() { return this.shopId; };
-    }
-    
-    if (!NEXUS_CONFIG.call) {
-        NEXUS_CONFIG.call = async function(action, data = {}) {
-            var url = this.API_URL || MOTOR_FALLBACK;
-            var payload = { shopId: this.shopId, action: action, ...data };
-            
-            var response = await fetch(url, {
-                method: "POST",
-                body: JSON.stringify(payload),
-                redirect: "follow"
-            });
-            return JSON.parse(await response.text());
-        };
-    }
-})();
-
 // PWA
 let deferredPrompt;
 window.addEventListener('beforeinstallprompt', e => {
@@ -282,24 +205,26 @@ async function cargarTienda() {
         filtrarBusqueda();
         actualizarCarritoUI();
         initDarkMode();
+        return;
     } catch (e) { 
         console.log(">>> Error cargarTienda:", e);
-    }
-
-    const cachedConfig = getCacheData('nx_config');
-    const cachedProds = getCacheData('nx_productos');
-    if (cachedConfig && cachedProds) {
-        dbConfig = cachedConfig;
-        dbProductos = cachedProds;
-        dbCupones = getCacheData('nx_cupones') || [];
-        aplicarConfigTienda();
-        if (localStorage.getItem('nexus_coupon')) {
-            cuponAplicado = JSON.parse(localStorage.getItem('nexus_coupon'));
+        
+        // Código de respaldo: cargar desde cache solo si hay error
+        const cachedConfig = getCacheData('nx_config');
+        const cachedProds = getCacheData('nx_productos');
+        if (cachedConfig && cachedProds) {
+            dbConfig = cachedConfig;
+            dbProductos = cachedProds;
+            dbCupones = getCacheData('nx_cupones') || [];
+            aplicarConfigTienda();
+            if (localStorage.getItem('nexus_coupon')) {
+                cuponAplicado = JSON.parse(localStorage.getItem('nexus_coupon'));
+            }
+            renderizarCategorias();
+            filtrarBusqueda();
+            actualizarCarritoUI();
+            return;
         }
-        renderizarCategorias();
-        filtrarBusqueda();
-        actualizarCarritoUI();
-    } else {
         var maintenanceEl = document.getElementById("maintenanceScreen");
         if (maintenanceEl) maintenanceEl.style.display = 'flex';
     }
