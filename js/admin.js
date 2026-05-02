@@ -199,7 +199,7 @@ const NexusDialog = {
 // ==========================================
 // VARIABLES GLOBALES
 // ==========================================
-let appData = { productos: [], pedidos: [], cupones: [], config: {}, resumen: {} };
+let appData = { productos: [], pedidos: [], cupones: [], config: {}, resumen: {}, success: true };
 let currentPin = "1234";
 let pollingInterval;
 let currentTab = 'productos';
@@ -556,11 +556,12 @@ function iniciarPollingPedidos() {
     (async function() {
         try {
             var res = await NexusCore.ejecutar('getInitData');
-            if (res.success && res.pedidos) {
-                var nuevoCount = res.pedidos.length;
+            if (res && res.success) {
+                var pedidos = res.pedidos || [];
+                var nuevoCount = pedidos.length;
                 if (nuevoCount > lastPedidoCount) {
-                    var nuevosPedidos = res.pedidos.slice(0, nuevoCount - lastPedidoCount);
-                    appData.pedidos = res.pedidos;
+                    var nuevosPedidos = pedidos.slice(0, nuevoCount - lastPedidoCount);
+                    appData.pedidos = pedidos;
                     if (nuevosPedidos.length > 0) {
                         showOrderNotification(nuevosPedidos[0]);
                         playNotificationSound();
@@ -576,12 +577,13 @@ function iniciarPollingPedidos() {
         // Reducir tiempo de espera de 15s a 5s para notificaciones más rápidas
         try {
             var res = await NexusCore.ejecutar('getInitData');
-            if (res.success && res.pedidos) {
-                var nuevoCount = res.pedidos.length;
+            if (res && res.success) {
+                var pedidos = res.pedidos || [];
+                var nuevoCount = pedidos.length;
                 if (nuevoCount > lastPedidoCount) {
                     // Hay nuevos pedidos
-                    var nuevosPedidos = res.pedidos.slice(0, nuevoCount - lastPedidoCount);
-                    appData.pedidos = res.pedidos;
+                    var nuevosPedidos = pedidos.slice(0, nuevoCount - lastPedidoCount);
+                    appData.pedidos = pedidos;
                     
                     // Mostrar notificación del nuevo pedido
                     if (nuevosPedidos.length > 0) {

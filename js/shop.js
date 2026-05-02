@@ -32,20 +32,34 @@
         resolvedShopId = identifier;
     }
     
-    // Si no está en mapeo local ni es ID directo, intentar PCC
+    // Verificar si hay datos en cache para usar como fallback
+    var cachedConfig = getCacheData('nx_config');
+    var cachedProds = getCacheData('nx_productos');
+    var tieneCache = cachedConfig && cachedConfig.Nombre_Tienda && cachedProds && cachedProds.length > 0;
+    
+    // Si no está en mapeo local ni es ID directo
     if (!resolvedShopId && identifier.length < 30) {
-        console.log(">>> Shop: Consultando PCC para:", key);
-        // No podemos hacer fetch async aquí, así que usamos el nombre directamente
-        // y dejamos que cargarTienda maneje el error
+        if (tieneCache) {
+            console.log(">>> Shop: Usando cache local, servidor no disponible");
+        } else {
+            console.log(">>> Shop: Tienda no encontrada en mapeo:", key);
+            NEXUS_CONFIG.isReady = false;
+            var maintenanceEl = document.getElementById("maintenanceScreen");
+            if (maintenanceEl) maintenanceEl.style.display = 'flex';
+        }
     }
     
-    // Usar lo que tengamos
-    if (!resolvedShopId) resolvedShopId = identifier;
+    // Usar cache si no hay shopId válido
+    if (!resolvedShopId || resolvedShopId === identifier) {
+        if (tieneCache) {
+            resolvedShopId = "cached";
+        }
+    }
     
-    NEXUS_CONFIG.shopId = resolvedShopId;
+    NEXUS_CONFIG.shopId = resolvedShopId || "cached";
     NEXUS_CONFIG.pccShopId = identifier;
     NEXUS_CONFIG.API_URL = MOTOR_FALLBACK;
-    NEXUS_CONFIG.isReady = true;
+    NEXUS_CONFIG.isReady = tieneCache || !!resolvedShopId;
     
     if (!NEXUS_CONFIG.getShopId) {
         NEXUS_CONFIG.getShopId = function() { return this.shopId; };
@@ -187,6 +201,21 @@ async function cargarTienda() {
         
         // Validar que la tienda existe
         if (!res.success) {
+            // Verificar si hay datos en cache
+            var cachedConfig = getCacheData('nx_config');
+            var cachedProds = getCacheData('nx_productos');
+            if (cachedConfig && cachedProds && cachedProds.length > 0) {
+                console.log(">>> Usando datos desde cache (servidor no respondió)");
+                dbConfig = cachedConfig;
+                dbProductos = cachedProds;
+                dbCupones = getCacheData('nx_cupones') || [];
+                aplicarConfigTienda();
+                renderizarCategorias();
+                filtrarBusqueda();
+                actualizarCarritoUI();
+                initDarkMode();
+                return;
+            }
             var maintenanceEl = document.getElementById("maintenanceScreen");
             if (maintenanceEl) maintenanceEl.style.display = 'flex';
             return;
@@ -194,6 +223,24 @@ async function cargarTienda() {
         
         var tieneNombre = res.config && res.config.Nombre_Tienda && res.config.Nombre_Tienda.trim() !== "";
         var tieneProductos = res.productos && Array.isArray(res.productos) && res.productos.length > 0;
+        
+        // Si no tiene nombre pero tiene cache, usarla
+        if (!tieneNombre && !tieneProductos) {
+            var cachedConfig = getCacheData('nx_config');
+            var cachedProds = getCacheData('nx_productos');
+            if (cachedConfig && cachedConfig.Nombre_Tienda && cachedProds && cachedProds.length > 0) {
+                console.log(">>> Usando cache local por respuesta vacía");
+                dbConfig = cachedConfig;
+                dbProductos = cachedProds;
+                dbCupones = getCacheData('nx_cupones') || [];
+                aplicarConfigTienda();
+                renderizarCategorias();
+                filtrarBusqueda();
+                actualizarCarritoUI();
+                initDarkMode();
+                return;
+            }
+        }
         
         // Si no hay productos pero hay configuración, usar cache local
         if (!tieneProductos && res.config && res.config.Nombre_Tienda) {
