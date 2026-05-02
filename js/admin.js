@@ -361,7 +361,8 @@ window.onload = async () => {
     
     NEXUS_CONFIG.call = async function(action, data = {}) {
         var url = this.API_URL || MOTOR_FALLBACK;
-        var payload = { shopId: this.shopId, action: action, ...data };
+        var payload = { shopId: this.shopId, action: action, data: data };
+        console.log(">>> call payload:", payload);
         
         var response = await fetch(url, {
             method: "POST",
@@ -696,15 +697,19 @@ function renderProductos() {
     // ─── OBTENER CATEGORÍAS DE CONFIG + PRODUCTOS ───
     // 1. Categorías definidas en Configuración (onboarding / ajustes)
     let configCats = [];
-    if (appData.config && appData.config.Categorias_Lista) {
-        configCats = appData.config.Categorias_Lista
-            .split(',')
+    var catsConfigStr = appData.config ? appData.config.Categorias_Lista : "";
+    console.log(">>> Categorías config:", catsConfigStr);
+    
+    if (catsConfigStr) {
+        // Soportar tanto comas como pipes como separadores
+        configCats = catsConfigStr.split(/[,\|]/)
             .map(c => c.trim())
             .filter(c => c.length > 0);
     }
 
     // 2. Categorías que ya usan los productos existentes
-    const productCats = [...new Set(appData.productos.map(p => p.categoria).filter(Boolean))];
+    const productCats = [...new Set((appData.productos || []).map(p => p.categoria || '').filter(c => c.trim().length > 0))];
+    console.log(">>> Categorías productos:", productCats);
 
     // 3. Unir ambas listas sin duplicados, manteniendo el orden: config primero
     const cats = [...new Set([...configCats, ...productCats])];
@@ -785,12 +790,12 @@ function openEditModalInline(id) {
     }
     if(!p) return;
 
-    document.getElementById("editProductId").value = p.id;
-    document.getElementById("editNombre").value = p.nombre;
+    document.getElementById("editProductId").value = p.id || "";
+    document.getElementById("editNombre").value = p.nombre || "";
     document.getElementById("editCategoria").value = p.categoria || "General";
-    document.getElementById("editPrecio").value = p.precio;
+    document.getElementById("editPrecio").value = p.precio || "";
     document.getElementById("editCosto").value = p.costo || "";
-    document.getElementById("editStock").value = p.stock;
+    document.getElementById("editStock").value = p.stock || 0;
     document.getElementById("editEstado").value = p.estado || "Publicado";
     document.getElementById("editDetalle").value = p.detalle || "";
     var editPreview = document.getElementById("editPreview");
@@ -962,9 +967,16 @@ async function guardarProducto() {
     if (file) {
         imagen = await NexusCore.archivoABase64(file);
     }
+    
+    // Asegurar que imagen tenga un valor válido
+    if (!imagen || imagen === 'undefined' || imagen === 'null') {
+        imagen = "https://cdn-icons-png.flaticon.com/512/685/685655.png";
+    }
 
     const accion = id ? 'updateProduct' : 'addProduct';
-    const datos  = { id, nombre, precio, costo, stock, estado, detalle, categoria: cat, imagen };
+    const datos  = { id: id || null, nombre, precio, costo, stock, estado, detalle, categoria: cat, imagen };
+    
+    console.log(">>> Guardando producto:", datos);
 
     // Agregar datos de cupón si aplica
     if(!id && hasCoupon && couponCode) {
@@ -978,7 +990,16 @@ async function guardarProducto() {
         };
     }
 
-    const res = await NexusCore.ejecutar(accion, datos);
+    var res;
+    try {
+        res = await NexusCore.ejecutar(accion, datos);
+        console.log(">>> Respuesta guardar:", res);
+    } catch(e) {
+        console.error(">>> Error guardar producto:", e);
+        NexusDialog.alert("Error: " + e.message, "Error");
+        if (btn) { btn.innerText = "Guardar Producto"; btn.disabled = false; }
+        return;
+    }
 
     if (res.success) {
         const refreshData = await NexusCore.ejecutar('getInitData');
@@ -1940,7 +1961,8 @@ function openAddModal() {
     document.getElementById("pStock").value = "";
     document.getElementById("pDetalle").value = "";
     document.getElementById("pEstado").value = "Publicado";
-    document.getElementById("preview").src = "https://cdn-icons-png.flaticon.com/512/685/685655.png";
+    var previewReset = document.getElementById("preview");
+    if (previewReset) previewReset.src = "https://cdn-icons-png.flaticon.com/512/685/685655.png";
     document.getElementById("fileInput").value = "";
     
     // Reset cupón
@@ -1964,7 +1986,10 @@ function openAddModal() {
 
 function previewImg(e) {
     const f = e.target.files[0];
-    if (f) document.getElementById("preview").src = URL.createObjectURL(f);
+    if (f) {
+        var previewFile = document.getElementById("preview");
+        if (previewFile) previewFile.src = URL.createObjectURL(f);
+    }
 }
 
 function toggleCouponSection() {
