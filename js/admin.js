@@ -536,6 +536,47 @@ function cargarPanel() {
     if (typeof renderPedidos === 'function') {
         renderPedidos();
     }
+    
+    // Iniciar polling para nuevos pedidos
+    iniciarPollingPedidos();
+}
+
+function iniciarPollingPedidos() {
+    if (pollingInterval) clearInterval(pollingInterval);
+    
+    var lastPedidoCount = appData.pedidos ? appData.pedidos.length : 0;
+    
+    pollingInterval = setInterval(async function() {
+        try {
+            var res = await NexusCore.ejecutar('getInitData');
+            if (res.success && res.pedidos) {
+                var nuevoCount = res.pedidos.length;
+                if (nuevoCount > lastPedidoCount) {
+                    // Hay nuevos pedidos
+                    var nuevosPedidos = res.pedidos.slice(0, nuevoCount - lastPedidoCount);
+                    appData.pedidos = res.pedidos;
+                    
+                    // Mostrar notificación del nuevo pedido
+                    if (nuevosPedidos.length > 0) {
+                        var ultimo = nuevosPedidos[0];
+                        showOrderNotification(ultimo);
+                        playNotificationSound();
+                        vibrateDevice();
+                    }
+                    
+                    // Actualizar vista si está en pestaña pedidos
+                    var pedidosView = document.getElementById('view-pedidos');
+                    if (pedidosView && !pedidosView.classList.contains('hidden')) {
+                        renderPedidos();
+                    }
+                    
+                    lastPedidoCount = nuevoCount;
+                }
+            }
+        } catch(e) {
+            console.log("Polling pedidos:", e.message);
+        }
+    }, 15000); // Cada 15 segundos
 }
 
 // ==========================================
@@ -640,7 +681,10 @@ function getProductTags(p) {
     return tags;
 }
 function renderProductos() {
-
+    const container = document.getElementById("listaProductos");
+    if (container) {
+        container.innerHTML = '<div class="text-center p-10 text-slate-400"><div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-emerald-500 mb-2"></div><p class="text-xs font-bold">Cargando productos...</p></div>';
+    }
     
     renderizarResumenInventario();
 
@@ -1024,6 +1068,11 @@ function openCatalogPreview() {
 // ==========================================
 function renderCupones() {
     const container = document.getElementById("listaCupones");
+    if (!container) return;
+    
+    // Mostrar indicador de carga
+    container.innerHTML = '<div class="text-center p-10 text-slate-400"><div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-emerald-500 mb-2"></div><p class="text-xs font-bold">Cargando cupones...</p></div>';
+    
     const cupones = appData.cupones || [];
 
     if(cupones.length === 0) {
@@ -1188,7 +1237,7 @@ function filtrarProductosRegalo() {
     if (!input || !select) return;
     
     var term = input.value.toLowerCase();
-    var prods = appData.productos?.filter(p => p.estado === "Publicado" && p.nombre.toLowerCase().includes(term)) || [];
+    var prods = appData.productos?.filter(p => p.estado === "Publicado" && (p.nombre || '').toLowerCase().includes(term)) || [];
     
     select.innerHTML = '<option value="">🔍 Selecciona un producto...</option>';
     prods.forEach(function(p) {
@@ -1365,6 +1414,12 @@ function setOrderFilter(filtro) {
 
 function renderPedidos() {
     const container = document.getElementById("listaPedidos");
+    
+    if (!container) return;
+    
+    // Mostrar indicador de carga
+    container.innerHTML = '<div class="text-center p-10 text-slate-400"><div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-emerald-500 mb-2"></div><p class="text-xs font-bold">Cargando pedidos...</p></div>';
+    
     const counts = {
         'Todos':      appData.pedidos?.length || 0,
         'Pendiente':  appData.pedidos?.filter(p => p.estado === 'Pendiente').length  || 0,

@@ -311,7 +311,7 @@ function filtrarCat(cat, btn) {
 function getFilteredProducts() {
     const term = document.getElementById("searchInput")?.value.toLowerCase() || '';
     let lista = catActiva === 'Todos' ? dbProductos : dbProductos.filter(p => (p.categoria || '').trim() === catActiva);
-    if (term) lista = lista.filter(p => p.nombre.toLowerCase().includes(term));
+    if (term) lista = lista.filter(p => (p.nombre || '').toLowerCase().includes(term));
     return lista;
 }
 
@@ -355,7 +355,7 @@ function renderizarProductos(lista) {
         
         return `<div class="card ${cupon ? 'coupon-product-card' : ''} ${agotado ? 'agotado' : ''}">
             ${agotado ? '<div class="agotado-tag">AGOTADO</div>' : ''} ${badge} ${nuevoBadge} ${stockBadge}
-            <img src="${p.imagen}" class="card-img" onclick="verDetalle('${p.id}')" onerror="this.src='https://cdn-icons-png.flaticon.com/512/685/685655.png'">
+            <img src="${p.imagen || 'https://cdn-icons-png.flaticon.com/512/685/685655.png'}" class="card-img" onclick="verDetalle('${p.id}')" onerror="this.src='https://cdn-icons-png.flaticon.com/512/685/685655.png'">
             <div class="card-body">
                 <div class="card-title" onclick="verDetalle('${p.id}')">${p.nombre}</div>
                 <div class="card-price">${descuento}RD$ ${Number(precioFinal).toLocaleString()}</div>
@@ -381,7 +381,8 @@ function verDetalle(id) {
     const cupon = getCuponProducto(id);
     const precioFinal = calcularPrecioFinal(p.precio, cupon);
     
-    document.getElementById("detImg").src = p.imagen;
+    var detImg = document.getElementById("detImg");
+    if (detImg) detImg.src = p.imagen || "https://cdn-icons-png.flaticon.com/512/685/685655.png";
     document.getElementById("detCat").innerText = p.categoria || 'General';
     document.getElementById("detName").innerText = p.nombre;
     
@@ -445,7 +446,7 @@ function openWhatsAppModal(id, fromDetail = false) {
     
     document.getElementById('whatsappProductInfo').innerHTML = `
         <div style="display:flex;gap:12px;align-items:center;">
-            <img src="${p.imagen}" style="width:60px;height:60px;object-fit:cover;border-radius:12px" onerror="this.src='https://cdn-icons-png.flaticon.com/512/685/685655.png'">
+            <img src="${p.imagen || 'https://cdn-icons-png.flaticon.com/512/685/685655.png'}" style="width:60px;height:60px;object-fit:cover;border-radius:12px" onerror="this.src='https://cdn-icons-png.flaticon.com/512/685/685655.png'">
             <div>
                 <p style="font-weight:700;font-size:13px">${p.nombre}</p>
                 <p style="font-size:11px;color:#8b8b94">Cantidad: ${qty}</p>
