@@ -526,13 +526,23 @@ function cargarPanel() {
     var adminContent = document.getElementById('adminContent');
     if (loginSection) loginSection.style.display = 'none';
     if (adminContent) adminContent.style.display = 'block';
+    
+    // Cargar analytics automáticamente
+    if (typeof loadAnalyticsData === 'function') {
+        loadAnalyticsData('semana');
+    }
+    
+    // También cargar pedidos
+    if (typeof renderPedidos === 'function') {
+        renderPedidos();
+    }
 }
 
 // ==========================================
 // DASHBOARD
 // ==========================================
 function poblarDashboard() {
-    const cfg = appData.config;
+    const cfg = appData && appData.config ? appData.config : {};
 
     // Validar que los elementos existan antes de asignarles texto
     const displayTienda = document.getElementById("displayTienda");
@@ -669,8 +679,9 @@ function renderProductos() {
 
 function applyFilters() {
 
-
+    var lista = appData.productos || [];
     var container = document.getElementById("listaProductos");
+    if (!container) return;
 
     if (lista.length === 0) {
         container.innerHTML = '<div class="text-center p-10 text-slate-400 font-bold text-xs uppercase border-2 border-dashed border-slate-200 rounded-3xl">Sin productos</div>';
@@ -821,10 +832,10 @@ async function guardarEdicionProducto() {
     }
 
     const btn = document.getElementById("btnSaveEditProduct");
-    btn.innerText = "Guardando...";
-    btn.disabled = true;
+    if (btn) { btn.innerText = "Guardando..."; btn.disabled = true; }
 
-    let imagen = document.getElementById("editPreview").src;
+    var editPreview = document.getElementById("editPreview");
+    let imagen = editPreview ? editPreview.src : "https://cdn-icons-png.flaticon.com/512/685/685655.png";
     if (file) {
         imagen = await NexusCore.archivoABase64(file);
     }
@@ -980,7 +991,7 @@ async function duplicarProducto(id) {
         estado: "Archivado",
         detalle: original.detalle,
         categoria: original.categoria,
-        imagen: original.imagen
+        imagen: original.imagen || "https://cdn-icons-png.flaticon.com/512/685/685655.png"
     };
 
     const res = await NexusCore.ejecutar('addProduct', datos);
@@ -2058,8 +2069,8 @@ async function saveWizard() {
             NexusDialog.alert(res.message || "Error al crear la tienda.", "Error");
             if (btn) {
                 btn.innerText = "Crear Tienda";
-                btn.disabled = false;
-            }
+if (btn) { btn.disabled = false; }
+        }
         }
     } catch(e) {
         console.error("Error saveWizard:", e);
@@ -2108,6 +2119,7 @@ async function triggerReset() {
 // ==========================================
 function toggleModal(id, s) {
     const el = document.getElementById(id);
+    if (!el) return;
     el.classList.toggle("hidden", !s);
     if (s) el.classList.add("flex");
     else el.classList.remove("flex");
