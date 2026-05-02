@@ -907,7 +907,11 @@ async function guardarEdicionProducto() {
     }
 
     const btn = document.getElementById("btnSaveEditProduct");
-    if (btn) { btn.innerText = "Guardando..."; btn.disabled = true; }
+    if (btn) { 
+        btn.innerHTML = '<span class="animate-spin mr-2">⟳</span> Guardando...'; 
+        btn.disabled = true; 
+        btn.classList.add('opacity-75');
+    }
 
     var editPreview = document.getElementById("editPreview");
     let imagen = editPreview ? editPreview.src : "https://cdn-icons-png.flaticon.com/512/685/685655.png";
@@ -979,8 +983,24 @@ async function guardarProducto() {
 
     const btn = document.getElementById("btnSaveProduct");
     if (btn) {
-        btn.innerText = "Guardando...";
+        btn.innerHTML = '<span class="animate-spin mr-2">⟳</span> Guardando...';
         btn.disabled = true;
+        btn.classList.add('opacity-75');
+    }
+    
+    // Mostrar indicador visual en el modal
+    var modalProduct = document.getElementById("modalProduct");
+    if (modalProduct) {
+        modalProduct.classList.add('relative');
+        var loadingIndicator = document.getElementById('modalLoadingIndicator');
+        if (!loadingIndicator) {
+            loadingIndicator = document.createElement('div');
+            loadingIndicator.id = 'modalLoadingIndicator';
+            loadingIndicator.className = 'absolute inset-0 bg-white/80 flex items-center justify-center z-50';
+            loadingIndicator.innerHTML = '<div class="text-center"><div class="inline-block animate-spin rounded-full h-10 w-10 border-4 border-emerald-500 border-t-transparent"></div><p class="mt-2 text-sm font-bold text-emerald-600">Guardando producto...</p></div>';
+        }
+        loadingIndicator.style.display = 'flex';
+        modalProduct.appendChild(loadingIndicator);
     }
 
     var previewEl = document.getElementById("preview");
@@ -1018,7 +1038,9 @@ async function guardarProducto() {
     } catch(e) {
         console.error(">>> Error guardar producto:", e);
         NexusDialog.alert("Error: " + e.message, "Error");
-        if (btn) { btn.innerText = "Guardar Producto"; btn.disabled = false; }
+        if (btn) { btn.innerHTML = 'Guardar Producto'; btn.disabled = false; btn.classList.remove('opacity-75'); }
+        var loadingIndicator = document.getElementById('modalLoadingIndicator');
+        if (loadingIndicator) loadingIndicator.style.display = 'none';
         return;
     }
 
@@ -1037,9 +1059,14 @@ async function guardarProducto() {
     }
 
     if (btn) {
-        btn.innerText = "Guardar Producto";
+        btn.innerHTML = 'Guardar Producto';
         btn.disabled = false;
+        btn.classList.remove('opacity-75');
     }
+    
+    // Ocultar indicador de carga
+    var loadingIndicator = document.getElementById('modalLoadingIndicator');
+    if (loadingIndicator) loadingIndicator.style.display = 'none';
 }
 
 // ==========================================

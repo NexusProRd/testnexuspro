@@ -197,10 +197,10 @@ async function cargarTienda() {
         
         // Si no hay productos pero hay configuración, usar cache local
         if (!tieneProductos && res.config && res.config.Nombre_Tienda) {
-            var cachedProds = getCacheData('nx_productos');
-            if (cachedProds && cachedProds.length > 0) {
+            var cacheProds = getCacheData('nx_productos');
+            if (cacheProds && cacheProds.length > 0) {
                 console.log(">>> Usando productos desde cache local");
-                res.productos = cachedProds;
+                res.productos = cacheProds;
                 tieneProductos = true;
             }
         }
