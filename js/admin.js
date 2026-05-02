@@ -860,7 +860,6 @@ function openEditModalInline(id) {
         document.getElementById("editCouponType").value = cupon.descuento_tipo || 'porcentaje';
         document.getElementById("editCouponValue").value = cupon.descuento_valor || '';
         document.getElementById("editCouponMessage").value = cupon.mensaje_sorpresa || '';
-        document.getElementById("editCouponSection").classList.add('active');
     } else {
         hasCouponCheck.checked = false;
         couponFields.style.display = 'none';
@@ -869,7 +868,6 @@ function openEditModalInline(id) {
         document.getElementById("editCouponType").value = 'porcentaje';
         document.getElementById("editCouponValue").value = '';
         document.getElementById("editCouponMessage").value = '';
-        document.getElementById("editCouponSection").classList.remove('active');
     }
 
     document.getElementById("modalEditProduct").classList.add("open");
@@ -882,7 +880,6 @@ function closeEditModal() {
 function toggleEditCouponSection() {
     const checked = document.getElementById("editHasCoupon").checked;
     document.getElementById("editCouponFields").style.display = checked ? 'block' : 'none';
-    document.getElementById("editCouponSection").classList.toggle('active', checked);
 }
 
 function generateEditRandomCoupon() {
