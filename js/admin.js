@@ -388,7 +388,10 @@ window.onload = async () => {
             console.log(">>> Respuesta del Master:", res);
             
             if (res.success) {
-                appData = res;
+                if (res.pedidos) appData.pedidos = res.pedidos;
+                if (res.productos) appData.productos = res.productos;
+                if (res.cupones) appData.cupones = res.cupones;
+                if (res.config) appData.config = res.config;
                 var tieneNombre = res.config && res.config.Nombre_Tienda && res.config.Nombre_Tienda.trim() !== "";
                 var tieneProductos = res.productos && res.productos.length > 0;
                 
@@ -505,7 +508,10 @@ function initPreloaded() {
         console.log(">>> initPreloaded: No hay appData, solicitando...");
         NexusCore.ejecutar('getInitData').then(function(res) {
             if (res.success) {
-                appData = res;
+                if (res.pedidos) appData.pedidos = res.pedidos;
+                if (res.productos) appData.productos = res.productos;
+                if (res.cupones) appData.cupones = res.cupones;
+                if (res.config) appData.config = res.config;
                 dbConfig = res.config || {};
                 dbProductos = res.productos || [];
                 dbCupones = res.cupones || [];
@@ -537,7 +543,10 @@ function cargarPanel() {
     if (typeof renderPedidos === 'function') {
         NexusCore.ejecutar('getInitData').then(function(res) {
             if (res && res.success) {
-                appData = res;
+                if (res.pedidos) appData.pedidos = res.pedidos;
+                if (res.productos) appData.productos = res.productos;
+                if (res.cupones) appData.cupones = res.cupones;
+                if (res.config) appData.config = res.config;
             }
             renderPedidos();
         });
@@ -1495,7 +1504,10 @@ function setOrderFilter(filtro) {
     } else {
         NexusCore.ejecutar('getInitData').then(function(res) {
             if (res && res.success) {
-                appData = res;
+                if (res.pedidos) appData.pedidos = res.pedidos;
+                if (res.productos) appData.productos = res.productos;
+                if (res.cupones) appData.cupones = res.cupones;
+                if (res.config) appData.config = res.config;
             }
             renderPedidos();
         });
@@ -1792,14 +1804,9 @@ function switchTab(tab) {
 
         // Especial handling per tab
         if (tab === 'pedidos') {
-            // Primero cargar datos frescos
-            NexusCore.ejecutar('getInitData').then(function(res) {
-                if (res && res.success) {
-                    appData = res;
-                }
+            syncOrdersSilently().then(function() {
                 renderPedidos();
             });
-            syncOrdersSilently();
         }
 
         if (tab === 'analytics') {
