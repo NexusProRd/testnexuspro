@@ -552,7 +552,28 @@ function iniciarPollingPedidos() {
     
     var lastPedidoCount = appData.pedidos ? appData.pedidos.length : 0;
     
+    // Verificación inmediata al iniciar (sin esperar el intervalo)
+    (async function() {
+        try {
+            var res = await NexusCore.ejecutar('getInitData');
+            if (res.success && res.pedidos) {
+                var nuevoCount = res.pedidos.length;
+                if (nuevoCount > lastPedidoCount) {
+                    var nuevosPedidos = res.pedidos.slice(0, nuevoCount - lastPedidoCount);
+                    appData.pedidos = res.pedidos;
+                    if (nuevosPedidos.length > 0) {
+                        showOrderNotification(nuevosPedidos[0]);
+                        playNotificationSound();
+                        vibrateDevice();
+                    }
+                    renderPedidos();
+                }
+            }
+        } catch(e) {}
+    })();
+    
     pollingInterval = setInterval(async function() {
+        // Reducir tiempo de espera de 15s a 5s para notificaciones más rápidas
         try {
             var res = await NexusCore.ejecutar('getInitData');
             if (res.success && res.pedidos) {
@@ -582,7 +603,7 @@ function iniciarPollingPedidos() {
         } catch(e) {
             console.log("Polling pedidos:", e.message);
         }
-    }, 15000); // Cada 15 segundos
+    }, 5000); // Cada 5 segundos para notificaciones más rápidas
 }
 
 // ==========================================
@@ -1540,11 +1561,19 @@ async function updateStatus(orderId, nuevoEstado) {
 
         // 🔄 REFRESCAR TODOS LOS DATOS: pedidos + productos (stock actualizado)
         const refreshData = await NexusCore.ejecutar('getInitData');
+        console.log(">>> Refresh después de actualizar pedido:", refreshData);
+        
         if (refreshData.success) { 
             appData = refreshData; 
+            console.log(">>> appData actualizado:", appData);
+            
+            // Renderizar vista actual
             renderPedidos();
-            renderProductos();        // ← Actualiza stock en inventario
-            poblarDashboard();        // ← Actualiza resumen si aplica
+            
+            if (typeof renderProductos === 'function') renderProductos();
+            if (typeof poblarDashboard === 'function') poblarDashboard();
+        } else {
+            console.log(">>> Error al refresh:", refreshData.message);
         }
     } else {
         NexusDialog.alert(res.message || "Error al actualizar.", "Error");
@@ -1609,12 +1638,12 @@ function showOrderNotification(order) {
         notif.style.transform = "translateY(0)";
     }, 100);
 
-    // Auto-ocultar después de 30 segundos si no se interactúa
+    // Auto-ocultar después de 15 segundos si no se interactúa
     setTimeout(() => {
         if (currentNotifId === order.id) {
             hideOrderNotification();
         }
-    }, 30000);
+    }, 15000);
 }
 
 function hideOrderNotification() {
@@ -1720,7 +1749,13 @@ function switchTab(tab) {
 
         // Especial handling per tab
         if (tab === 'pedidos') {
-            renderPedidos();
+            // Primero cargar datos frescos
+            NexusCore.ejecutar('getInitData').then(function(res) {
+                if (res && res.success) {
+                    appData = res;
+                }
+                renderPedidos();
+            });
             syncOrdersSilently();
         }
 

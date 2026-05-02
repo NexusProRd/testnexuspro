@@ -193,7 +193,17 @@ async function cargarTienda() {
         }
         
         var tieneNombre = res.config && res.config.Nombre_Tienda && res.config.Nombre_Tienda.trim() !== "";
-        var tieneProductos = res.productos && res.productos.length > 0;
+        var tieneProductos = res.productos && Array.isArray(res.productos) && res.productos.length > 0;
+        
+        // Si no hay productos pero hay configuración, usar cache local
+        if (!tieneProductos && res.config && res.config.Nombre_Tienda) {
+            var cachedProds = getCacheData('nx_productos');
+            if (cachedProds && cachedProds.length > 0) {
+                console.log(">>> Usando productos desde cache local");
+                res.productos = cachedProds;
+                tieneProductos = true;
+            }
+        }
         console.log(">>> Tiene Nombre:", tieneNombre, "Tiene Productos:", tieneProductos);
         
         // Solo mostrar mantenimiento si está explícitamente configurado
