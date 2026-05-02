@@ -569,8 +569,8 @@ function iniciarPollingPedidos() {
     // Verificación inmediata al iniciar (sin esperar el intervalo)
     (async function() {
         try {
-            var res = await NexusCore.ejecutar('getInitData');
-            if (res && res.success) {
+            var res = await NexusCore.ejecutar('getOrdersOnly');
+            if (res && res.success && res.pedidos) {
                 var pedidos = res.pedidos || [];
                 var nuevoCount = pedidos.length;
                 if (nuevoCount > lastPedidoCount) {
@@ -590,8 +590,8 @@ function iniciarPollingPedidos() {
     pollingInterval = setInterval(async function() {
         // Reducir tiempo de espera de 15s a 5s para notificaciones más rápidas
         try {
-            var res = await NexusCore.ejecutar('getInitData');
-            if (res && res.success) {
+            var res = await NexusCore.ejecutar('getOrdersOnly');
+            if (res && res.success && res.pedidos) {
                 var pedidos = res.pedidos || [];
                 var nuevoCount = pedidos.length;
                 if (nuevoCount > lastPedidoCount) {
@@ -1611,16 +1611,26 @@ async function updateStatus(orderId, nuevoEstado) {
     hideLoading();
 
     if (res.success) {
+        // Actualización instantánea en UI antes de esperar respuesta del servidor
+        if (appData && appData.pedidos) {
+            for (var i = 0; i < appData.pedidos.length; i++) {
+                if (appData.pedidos[i].id === orderId) {
+                    appData.pedidos[i].estado = nuevoEstado;
+                    break;
+                }
+            }
+        }
+        renderPedidos();
+        
         $text("successMessage", `Orden ${nuevoEstado}.`);
         toggleModal("modalSuccess", true);
 
-        // 🔄 REFRESCAR TODOS LOS DATOS: pedidos + productos (stock actualizado)
-        const refreshData = await NexusCore.ejecutar('getInitData');
-        console.log(">>> Refresh después de actualizar pedido:", refreshData);
+        // 🔄 REFRESCAR DATOS EN BACKGROUND: pedidos + productos (stock actualizado)
+        const refreshData = await NexusCore.ejecutar('getOrdersOnly');
         
-        if (refreshData.success) { 
-            appData = refreshData; 
-            console.log(">>> appData actualizado:", appData);
+        if (refreshData.success && refreshData.pedidos) { 
+            appData.pedidos = refreshData.pedidos;
+            console.log(">>> appData.pedidos actualizado:", appData.pedidos.length);
             
             // Renderizar vista actual
             renderPedidos();
