@@ -2371,7 +2371,15 @@ async function triggerReset() {
 function toggleModal(id, s) {
     const el = document.getElementById(id);
     if (!el) return;
-    el.classList.toggle("hidden", !s);
-    if (s) el.classList.add("flex");
-    else el.classList.remove("flex");
+    
+    // Handle .open class (for modals using modal-overlay.open style)
+    if (el.classList.contains('modal-overlay') || el.classList.contains('modal-detail')) {
+        el.classList.toggle("open", s);
+        el.style.display = s ? 'flex' : 'none';
+    } else {
+        // Handle .hidden class (for standard modals)
+        el.classList.toggle("hidden", !s);
+        if (s) el.classList.add("flex");
+        else el.classList.remove("flex");
+    }
 }
