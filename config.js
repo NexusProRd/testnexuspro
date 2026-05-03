@@ -29,7 +29,7 @@ const NEXUS_CONFIG = {
     // ==========================================
     init: async function() {
         const params = new URLSearchParams(window.location.search);
-        const identifier = params.get('s');
+        const identifier = decodeURIComponent(params.get('s') || '');
 
         if (!identifier) {
             this.mostrarError("Tienda no encontrada", "No se especificó el parámetro 's' en la URL.");

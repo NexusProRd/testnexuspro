@@ -94,17 +94,17 @@ function toggleMaintenanceMode() {
 
 function verTienda() {
     var params = new URLSearchParams(window.location.search);
-    var shopName = params.get('s') || "test";
+    var shopName = decodeURIComponent(params.get('s') || 'test');
     var basePath = window.location.pathname.split('/admin.html')[0];
-    var url = window.location.origin + basePath + "/?s=" + shopName;
+    var url = window.location.origin + basePath + "/?s=" + encodeURIComponent(shopName);
     window.open(url, '_blank');
 }
 
 function compartirTienda() {
     var params = new URLSearchParams(window.location.search);
-    var shopName = params.get('s') || "test";
+    var shopName = decodeURIComponent(params.get('s') || 'test');
     var basePath = window.location.pathname.split('/admin.html')[0];
-    var url = window.location.origin + basePath + "/?s=" + shopName;
+    var url = window.location.origin + basePath + "/?s=" + encodeURIComponent(shopName);
     
     if (navigator.clipboard) {
         navigator.clipboard.writeText(url).then(function() {
@@ -339,7 +339,7 @@ window.onload = async () => {
     var MOTOR_FALLBACK = "https://script.google.com/macros/s/AKfycbwr3K5qcSQvmEb1qhoeM0L9E26k1nSHTjmBdoehu3vRcssLltMInwM4AaWw34ZOuKEF/exec";
     
     var params = new URLSearchParams(window.location.search);
-    var identifier = params.get('s') || "";
+    var identifier = decodeURIComponent(params.get('s') || '');
     
     var loginSubtitle = document.getElementById('loginSubtitle');
     if (loginSubtitle) loginSubtitle.innerHTML = '<span class="loader"></span> Validando tienda...';
