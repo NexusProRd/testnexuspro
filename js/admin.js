@@ -858,7 +858,6 @@ function applyFilters() {
         html += '<span class="text-[10px] ' + (ganancia >= 0 ? 'text-emerald-500' : 'text-rose-500') + ' font-bold">Gan: RD$ ' + formatRD(ganancia) + '</span>';
         html += '</div></div>';
         html += '<div class="flex flex-col gap-2">';
-        html += '<button onclick="event.stopPropagation(); duplicarProducto(\'' + p.id + '\')" class="bg-slate-100 text-slate-600 px-3 py-2 rounded-xl text-[9px] font-black uppercase">📋 Dup</button>';
         html += '<button onclick="event.stopPropagation(); openEditModalInline(\'' + p.id + '\')" class="bg-slate-100 text-slate-600 px-3 py-2 rounded-xl text-[9px] font-black uppercase">Editar</button>';
         html += '<button onclick="event.stopPropagation(); eliminarProducto(\'' + p.id + '\')" class="bg-rose-50 text-rose-500 px-3 py-2 rounded-xl text-[9px] font-black uppercase">Borrar</button>';
         html += '</div></div>';
@@ -1151,42 +1150,6 @@ async function eliminarProducto(id) {
     } else {
         NexusDialog.alert(res.message || "Error al eliminar.", "Error");
     }
-}
-
-// ==========================================
-// DUPLICAR PRODUCTO
-// ==========================================
-async function duplicarProducto(id) {
-    const original = appData.productos.find(p => p.id == id);
-    if (!original) return;
-
-    const btn = document.getElementById("btnSaveProduct");
-    if (btn) { btn.innerText = "Duplicando..."; btn.disabled = true; }
-
-    const datos = {
-        nombre: original.nombre + " (Copia)",
-        precio: original.precio,
-        costo: original.costo,
-        stock: original.stock,
-        estado: "Archivado",
-        detalle: original.detalle,
-        categoria: original.categoria,
-        imagen: original.imagen || "https://cdn-icons-png.flaticon.com/512/685/685655.png"
-    };
-
-    const res = await NexusCore.ejecutar('addProduct', datos);
-
-    if (res.success) {
-        const refreshData = await NexusCore.ejecutar('getInitData');
-        if (refreshData.success) {
-            appData = refreshData;
-            renderProductos();
-        }
-        $text("successMessage", "Producto duplicado.");
-        toggleModal("modalSuccess", true);
-    }
-
-    if (btn) { btn.innerText = "Guardar Producto"; btn.disabled = false; }
 }
 
 // ==========================================
