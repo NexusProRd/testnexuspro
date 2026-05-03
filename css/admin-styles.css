@@ -1287,7 +1287,11 @@ body {
     gap: 16px;
 }
 
-.loading-overlay.open {
+#loadingOverlay {
+    display: none;
+}
+
+#loadingOverlay.open {
     display: flex;
 }
 
