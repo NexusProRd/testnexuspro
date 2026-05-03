@@ -1109,7 +1109,6 @@ async function guardarProducto() {
         NexusDialog.alert(res.message || "Error al guardar.", "Error");
     }
 
-    const btn = document.getElementById("btnSaveProduct");
     if (btn) {
         btn.innerHTML = 'Guardar Producto';
         btn.disabled = false;
