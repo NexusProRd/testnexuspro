@@ -104,7 +104,8 @@ function verTienda() {
         shopName = "test";
     }
     shopName = shopName.toLowerCase().replace(/\s+/g, '');
-    var url = window.location.origin + "/?s=" + shopName;
+    var basePath = window.location.pathname.split('/admin.html')[0];
+    var url = window.location.origin + basePath + "/?s=" + shopName;
     window.open(url, '_blank');
 }
 
@@ -120,7 +121,8 @@ function compartirTienda() {
         shopName = "test";
     }
     shopName = shopName.toLowerCase().replace(/\s+/g, '');
-    var url = window.location.origin + "/?s=" + shopName;
+    var basePath = window.location.pathname.split('/admin.html')[0];
+    var url = window.location.origin + basePath + "/?s=" + shopName;
     
     if (navigator.clipboard) {
         navigator.clipboard.writeText(url).then(function() {
