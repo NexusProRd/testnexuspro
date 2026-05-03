@@ -93,34 +93,16 @@ function toggleMaintenanceMode() {
 }
 
 function verTienda() {
-    var shopName = "";
-    if (appData && appData.config && appData.config.Nombre_Tienda) {
-        shopName = appData.config.Nombre_Tienda;
-    } else if (typeof SHOP_MAPPING !== 'undefined') {
-        var params = new URLSearchParams(window.location.search);
-        var identifier = params.get('s') || "";
-        shopName = identifier;
-    } else {
-        shopName = "test";
-    }
-    shopName = shopName.toLowerCase().replace(/\s+/g, '');
+    var params = new URLSearchParams(window.location.search);
+    var shopName = params.get('s') || "test";
     var basePath = window.location.pathname.split('/admin.html')[0];
     var url = window.location.origin + basePath + "/?s=" + shopName;
     window.open(url, '_blank');
 }
 
 function compartirTienda() {
-    var shopName = "";
-    if (appData && appData.config && appData.config.Nombre_Tienda) {
-        shopName = appData.config.Nombre_Tienda;
-    } else if (typeof SHOP_MAPPING !== 'undefined') {
-        var params = new URLSearchParams(window.location.search);
-        var identifier = params.get('s') || "";
-        shopName = identifier;
-    } else {
-        shopName = "test";
-    }
-    shopName = shopName.toLowerCase().replace(/\s+/g, '');
+    var params = new URLSearchParams(window.location.search);
+    var shopName = params.get('s') || "test";
     var basePath = window.location.pathname.split('/admin.html')[0];
     var url = window.location.origin + basePath + "/?s=" + shopName;
     
