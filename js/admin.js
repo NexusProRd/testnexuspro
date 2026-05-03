@@ -93,16 +93,20 @@ function toggleMaintenanceMode() {
 }
 
 function verTienda() {
-    var params = new URLSearchParams(window.location.search);
-    var shopName = decodeURIComponent(params.get('s') || 'test');
+    var shopName = 'test';
+    if (window.location.search.indexOf('s=') !== -1) {
+        shopName = decodeURIComponent(window.location.search.substring(window.location.search.indexOf('s=') + 2));
+    }
     var basePath = window.location.pathname.split('/admin.html')[0];
     var url = window.location.origin + basePath + "/?s=" + encodeURIComponent(shopName);
     window.open(url, '_blank');
 }
 
 function compartirTienda() {
-    var params = new URLSearchParams(window.location.search);
-    var shopName = decodeURIComponent(params.get('s') || 'test');
+    var shopName = 'test';
+    if (window.location.search.indexOf('s=') !== -1) {
+        shopName = decodeURIComponent(window.location.search.substring(window.location.search.indexOf('s=') + 2));
+    }
     var basePath = window.location.pathname.split('/admin.html')[0];
     var url = window.location.origin + basePath + "/?s=" + encodeURIComponent(shopName);
     
@@ -338,8 +342,10 @@ window.onload = async () => {
     var PCC_URL = "https://script.google.com/macros/s/AKfycbxikMAM8onAKt8mDPS-VXfw5M3myiHMFfUbz3t_QaMWrU9V_qvO2ZoP-RD19N6qplnMwQ/exec";
     var MOTOR_FALLBACK = "https://script.google.com/macros/s/AKfycbwr3K5qcSQvmEb1qhoeM0L9E26k1nSHTjmBdoehu3vRcssLltMInwM4AaWw34ZOuKEF/exec";
     
-    var params = new URLSearchParams(window.location.search);
-    var identifier = decodeURIComponent(params.get('s') || '');
+    var identifier = '';
+    if (window.location.search.indexOf('s=') !== -1) {
+        identifier = decodeURIComponent(window.location.search.substring(window.location.search.indexOf('s=') + 2));
+    }
     
     var loginSubtitle = document.getElementById('loginSubtitle');
     if (loginSubtitle) loginSubtitle.innerHTML = '<span class="loader"></span> Validando tienda...';
