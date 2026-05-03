@@ -2262,6 +2262,21 @@ function abrirConfig() {
 // WIZARD DE CONFIGURACIÓN INICIAL
 // ==========================================
 async function saveWizard() {
+    if (!NEXUS_CONFIG || !NEXUS_CONFIG.API_URL || !NEXUS_CONFIG.shopId) {
+        // Fallback: obtener shopId de la URL o SHOP_MAPPING
+        var params = new URLSearchParams(window.location.search);
+        var identifier = params.get('s') || "test";
+        var key = identifier.toLowerCase().trim();
+        var fallbackShopId = (typeof SHOP_MAPPING !== 'undefined' && SHOP_MAPPING[key]) ? SHOP_MAPPING[key] : identifier;
+        var fallbackUrl = "https://script.google.com/macros/s/AKfycbwr3K5qcSQvmEb1qhoeM0L9E26k1nSHTjmBdoehu3vRcssLltMInwM4AaWw34ZOuKEF/exec";
+        
+        NEXUS_CONFIG = {
+            shopId: fallbackShopId,
+            API_URL: fallbackUrl
+        };
+        console.log(">>> NEXUS_CONFIG fallback:", NEXUS_CONFIG);
+    }
+    
     const pin        = document.getElementById("wizPin").value;
     const pinConfirm = document.getElementById("wizPinConfirm").value;
     const nombre     = document.getElementById("wizNombre").value.trim();
@@ -2275,6 +2290,8 @@ async function saveWizard() {
     if (!nombre)                  return NexusDialog.alert("El nombre de la tienda es obligatorio.", "Error");
     if (!wa)                      return NexusDialog.alert("El número de WhatsApp es obligatorio.", "Error");
 
+    console.log(">>> saveWizard iniciado, NEXUS_CONFIG:", NEXUS_CONFIG);
+    
     const btn = document.getElementById("btnWizSave");
     if (btn) {
         btn.innerText = "Creando Tienda...";
@@ -2282,7 +2299,10 @@ async function saveWizard() {
     }
     
     var url = NEXUS_CONFIG.API_URL;
+    console.log(">>> URL:", url, "shopId:", NEXUS_CONFIG.shopId);
+    
     var payload = { shopId: NEXUS_CONFIG.shopId, action: 'updateConfig', data: { pin: pin, nombre: nombre, eslogan: eslogan, categorias: categorias, wa: wa, sobre: sobre } };
+    console.log(">>> Payload:", payload);
     
     try {
         var response = await fetch(url, {
@@ -2291,6 +2311,8 @@ async function saveWizard() {
             redirect: "manual"
         });
         
+        console.log(">>> Response status:", response.status, "type:", response.type);
+        
         if (response.type === 'opaqueredirect') {
             var redirectUrl = response.url;
             var newResponse = await fetch(redirectUrl);
@@ -2298,8 +2320,11 @@ async function saveWizard() {
             var res = JSON.parse(text);
         } else {
             var text = await response.text();
+            console.log(">>> Response text:", text.substring(0, 200));
             var res = JSON.parse(text);
         }
+        
+        console.log(">>> Result:", res);
         
         if (res.success) {
             currentPin = pin;
@@ -2320,14 +2345,16 @@ async function saveWizard() {
             NexusDialog.alert(res.message || "Error al crear la tienda.", "Error");
             if (btn) {
                 btn.innerText = "Crear Tienda";
-if (btn) { btn.disabled = false; }
-        }
+                btn.disabled = false;
+            }
         }
     } catch(e) {
         console.error("Error saveWizard:", e);
         NexusDialog.alert("Error: " + e.message, "Error");
-        btn.innerText = "Crear Tienda";
-        btn.disabled = false;
+        if (btn) {
+            btn.innerText = "Crear Tienda";
+            btn.disabled = false;
+        }
     }
 }
 
