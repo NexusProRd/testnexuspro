@@ -2014,8 +2014,11 @@ function renderAnalytics() {
         for (var i = 0; i < appData.pedidos.length; i++) {
             var p = appData.pedidos[i];
             if (p.estado === "Confirmado") {
-                ventas += Number(p.total) || 0;
-                pedidos++;
+                // Solo sumar a estadísticas financieras y conteo si el total es mayor a 0
+                if (Number(p.total) > 0) {
+                    ventas += Number(p.total) || 0;
+                    pedidos++;
+                }
             }
         }
     }
