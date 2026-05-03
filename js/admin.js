@@ -93,22 +93,34 @@ function toggleMaintenanceMode() {
 }
 
 function verTienda() {
-    var shopName = localStorage.getItem('nx_shop_name') || "";
-    if (!shopName) {
-        shopName = appData.config && appData.config.Nombre_Tienda ? appData.config.Nombre_Tienda : "test";
+    var shopName = "";
+    if (appData && appData.config && appData.config.Nombre_Tienda) {
+        shopName = appData.config.Nombre_Tienda;
+    } else if (typeof SHOP_MAPPING !== 'undefined') {
+        var params = new URLSearchParams(window.location.search);
+        var identifier = params.get('s') || "";
+        shopName = identifier;
+    } else {
+        shopName = "test";
     }
     shopName = shopName.toLowerCase().replace(/\s+/g, '');
-    var url = window.location.origin + window.location.pathname + "?s=" + shopName;
+    var url = window.location.origin + "/?s=" + shopName;
     window.open(url, '_blank');
 }
 
 function compartirTienda() {
-    var shopName = localStorage.getItem('nx_shop_name') || "";
-    if (!shopName) {
-        shopName = appData.config && appData.config.Nombre_Tienda ? appData.config.Nombre_Tienda : "test";
+    var shopName = "";
+    if (appData && appData.config && appData.config.Nombre_Tienda) {
+        shopName = appData.config.Nombre_Tienda;
+    } else if (typeof SHOP_MAPPING !== 'undefined') {
+        var params = new URLSearchParams(window.location.search);
+        var identifier = params.get('s') || "";
+        shopName = identifier;
+    } else {
+        shopName = "test";
     }
     shopName = shopName.toLowerCase().replace(/\s+/g, '');
-    var url = window.location.origin + window.location.pathname + "?s=" + shopName;
+    var url = window.location.origin + "/?s=" + shopName;
     
     if (navigator.clipboard) {
         navigator.clipboard.writeText(url).then(function() {
