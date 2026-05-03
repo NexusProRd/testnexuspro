@@ -973,10 +973,12 @@ async function guardarEdicionProducto() {
 
     const btn = document.getElementById("btnSaveEditProduct");
     if (btn) { 
-        btn.innerHTML = '<span class="animate-spin mr-2">⟳</span> Guardando...'; 
+        btn.innerHTML = '<span class="animate-spin mr-2">⟳</span> Actualizando...'; 
         btn.disabled = true; 
         btn.classList.add('opacity-75');
     }
+    
+    showLoading("Actualizando producto...");
 
     var editPreview = document.getElementById("editPreview");
     let imagen = editPreview ? editPreview.src : "https://cdn-icons-png.flaticon.com/512/685/685655.png";
@@ -1000,7 +1002,16 @@ async function guardarEdicionProducto() {
         };
     }
 
-    const res = await NexusCore.ejecutar('updateProduct', datos);
+    var res;
+    try {
+        res = await NexusCore.ejecutar('updateProduct', datos);
+    } catch(e) {
+        console.error(">>> Error actualizar producto:", e);
+        NexusDialog.alert("Error: " + e.message, "Error");
+        hideLoading();
+        if (btn) { btn.innerText = "Guardar Cambios"; btn.disabled = false; btn.classList.remove('opacity-75'); }
+        return;
+    }
 
     if (res.success) {
         const refreshData = await NexusCore.ejecutar('getInitData');
@@ -1016,8 +1027,8 @@ async function guardarEdicionProducto() {
         NexusDialog.alert(res.message || "Error al guardar.", "Error");
     }
 
-    btn.innerText = "Guardar Cambios";
-    btn.disabled = false;
+    if (btn) { btn.innerText = "Guardar Cambios"; btn.disabled = false; btn.classList.remove('opacity-75'); }
+    hideLoading();
 }
 
 // ==========================================
