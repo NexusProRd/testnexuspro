@@ -299,12 +299,14 @@ function getBlockTimeRemaining() {
 // LOADING OVERLAY
 // ==========================================
 function showLoading(text = "Procesando...") {
+    var el = document.getElementById('loadingOverlay');
     $text('loadingText', text);
-    document.getElementById('loadingOverlay').classList.add('open');
+    el.style.display = 'flex';
 }
 
 function hideLoading() {
-    document.getElementById('loadingOverlay').classList.remove('open');
+    var el = document.getElementById('loadingOverlay');
+    el.style.display = 'none';
 }
 
 // ==========================================
