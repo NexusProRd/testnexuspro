@@ -420,6 +420,10 @@ window.onload = async () => {
     }
     // 3. Consultar al PCC (MasterController)
     else {
+        // Prioridad absoluta de URL y limpieza de arrastre de sesión
+        resolvedShopId = null;
+        NEXUS_CONFIG.shopId = '';
+
         console.log(">>> Consultando al PCC para:", key);
         try {
             var pccShopId = identifier || '';
@@ -449,20 +453,31 @@ window.onload = async () => {
             });
             var pccText = await pccResponse.text();
             console.log(">>> Respuesta PCC:", pccText.substring(0, 200));
-            
+
             var pccData = JSON.parse(pccText);
-            if (pccData.clients) {
-                var cliente = pccData.clients.find(function(c) { 
-                    return c.nombre && c.nombre.toLowerCase().trim() === key; 
-                });
-                
-                if (cliente) {
-                    console.log(">>> Cliente encontrado en PCC:", cliente.nombre, cliente.sheetId);
-                    resolvedShopId = cliente.sheetId;
-                }
+            if (!pccData || !Array.isArray(pccData.clients)) {
+                throw new Error("Respuesta PCC inválida");
             }
+
+            // Filtro estricto por nombre exacto normalizado
+            var matches = pccData.clients.filter(function(c) {
+                return c && c.nombre && c.nombre.toLowerCase().trim() === key;
+            });
+
+            if (matches.length !== 1) {
+                throw new Error("No existe coincidencia exacta para la tienda '" + identifier + "'");
+            }
+
+            var cliente = matches[0];
+            if (!cliente.sheetId) {
+                throw new Error("La tienda encontrada no tiene sheetId válido");
+            }
+
+            resolvedShopId = cliente.sheetId;
+            console.log('✅ Tienda Vinculada:', cliente.nombre, 'ID:', resolvedShopId);
         } catch(e) {
             console.log(">>> Error consultando PCC:", e.message);
+            resolvedShopId = null;
         }
     }
     
