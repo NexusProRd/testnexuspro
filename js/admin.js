@@ -422,14 +422,29 @@ window.onload = async () => {
     else {
         console.log(">>> Consultando al PCC para:", key);
         try {
+            var pccShopId = identifier || '';
             var pccToken = localStorage.getItem('nexus_admin_token') || '';
+
+            // Validación de seguridad: no enviar vacío
+            if (!pccShopId || !pccToken) {
+                var nuevoToken = await promptForToken();
+                if (!nuevoToken) {
+                    if (loginSubtitle) loginSubtitle.innerText = "Token requerido para conectar al PCC";
+                    return;
+                }
+                pccToken = nuevoToken;
+            }
+
+            var payload = {
+                shopId: pccShopId,
+                token: pccToken,
+                action: 'obtenerClientes'
+            };
+            console.log('Payload enviado: ' + JSON.stringify(payload));
+
             var pccResponse = await fetch(PCC_URL, {
                 method: "POST",
-                body: JSON.stringify({
-                    shopId: identifier,
-                    token: pccToken,
-                    action: 'obtenerClientes'
-                }),
+                body: JSON.stringify(payload),
                 redirect: "follow"
             });
             var pccText = await pccResponse.text();
