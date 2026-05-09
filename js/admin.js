@@ -17,6 +17,50 @@ function $removeClass(id, cls) { var el = document.getElementById(id); if (el) e
 function $toggleClass(id, cls, cond) { var el = document.getElementById(id); if (el) el.classList.toggle(cls, cond); }
 
 // ==========================================
+// GESTIÓN DE TOKEN DE SEGURIDAD
+// ==========================================
+var currentShopId = '';
+var currentToken = '';
+
+function getShopIdFromUrl() {
+    if (window.location.search.indexOf('s=') !== -1) {
+        return decodeURIComponent(window.location.search.substring(window.location.search.indexOf('s=') + 2));
+    }
+    return '';
+}
+
+function getStoredToken() {
+    return localStorage.getItem('nexus_admin_token') || '';
+}
+
+function saveToken(token) {
+    localStorage.setItem('nexus_admin_token', token);
+    currentToken = token;
+}
+
+function clearToken() {
+    localStorage.removeItem('nexus_admin_token');
+    currentToken = '';
+}
+
+async function promptForToken() {
+    return new Promise(function(resolve) {
+        var token = prompt('Introduce tu Token de Acceso:');
+        if (token && token.trim()) {
+            saveToken(token.trim());
+            resolve(token.trim());
+        } else {
+            resolve(null);
+        }
+    });
+}
+
+function isTokenError(response) {
+    return response && response.success === false && 
+           (response.message && response.message.toLowerCase().includes('token'));
+}
+
+// ==========================================
 // NOTIFICACIONES NATIVAS DEL NAVEGADOR
 // ==========================================
 async function requestNotificationPermission() {
@@ -378,9 +422,14 @@ window.onload = async () => {
     else {
         console.log(">>> Consultando al PCC para:", key);
         try {
+            var pccToken = localStorage.getItem('nexus_admin_token') || '';
             var pccResponse = await fetch(PCC_URL, {
                 method: "POST",
-                body: JSON.stringify({ action: 'obtenerClientes' }),
+                body: JSON.stringify({
+                    shopId: identifier,
+                    token: pccToken,
+                    action: 'obtenerClientes'
+                }),
                 redirect: "follow"
             });
             var pccText = await pccResponse.text();
@@ -421,7 +470,8 @@ window.onload = async () => {
     
     NEXUS_CONFIG.call = async function(action, data = {}) {
         var url = this.API_URL || MOTOR_FALLBACK;
-        var payload = { shopId: this.shopId, action: action, data: data };
+        var token = localStorage.getItem('nexus_admin_token') || '';
+        var payload = { shopId: this.shopId, token: token, action: action, data: data };
         console.log(">>> call payload:", payload);
         
         var response = await fetch(url, {
@@ -429,13 +479,42 @@ window.onload = async () => {
             body: JSON.stringify(payload),
             redirect: "follow"
         });
-        return JSON.parse(await response.text());
+        var result = JSON.parse(await response.text());
+        
+        // Validar respuesta de token inválido
+        if (result && result.success === false && result.message && result.message.toLowerCase().includes('token inválido')) {
+            console.log(">>> Token inválido, limpiando y pedindo de nuevo");
+            localStorage.removeItem('nexus_admin_token');
+            var nuevoToken = await promptForToken();
+            if (nuevoToken) {
+                // Reintentar con nuevo token
+                payload.token = nuevoToken;
+                var retryResponse = await fetch(url, {
+                    method: "POST",
+                    body: JSON.stringify(payload),
+                    redirect: "follow"
+                });
+                return JSON.parse(await retryResponse.text());
+            }
+        }
+        
+        return result;
     };
     
     if (loginSubtitle) loginSubtitle.innerHTML = '<span class="loader"></span> Conectando...';
     
     var shopId = resolvedShopId;
     
+    // Verificar token de acceso
+    var storedToken = localStorage.getItem('nexus_admin_token');
+    if (!storedToken) {
+        if (loginSubtitle) loginSubtitle.innerHTML = '<span class="loader"></span> Solicitando Token...';
+        var newToken = await promptForToken();
+        if (!newToken) {
+            if (loginSubtitle) loginSubtitle.innerText = "Token requerido para acceder";
+            return;
+        }
+    }
     
     if (shopId) {
         var pinContainer = document.getElementById('pinContainer');

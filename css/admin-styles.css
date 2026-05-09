@@ -1349,3 +1349,50 @@ body {
 ::-webkit-scrollbar-thumb:hover {
     background: var(--text-dim);
 }
+
+/* === REGALO ÚNICO - MODAL CUPÓN === */
+#regaloUnicoFields {
+    width: 100%;
+    margin-left: 0;
+    margin-right: 0;
+}
+
+#regaloUnicoFields > * {
+    width: 100%;
+    margin-bottom: 18px;
+    box-sizing: border-box;
+}
+
+#regaloUnicoFields #buscadorProducto {
+    width: 100%;
+    padding: 14px 16px;
+    box-sizing: border-box;
+}
+
+#regaloUnicoFields #couponProducto {
+    width: 100%;
+    padding: 12px;
+    min-height: 120px;
+    box-sizing: border-box;
+    margin-left: 0;
+    margin-right: 0;
+}
+
+#regaloUnicoFields #productoSeleccionado {
+    width: 100%;
+    box-sizing: border-box;
+    margin-left: 0;
+    margin-right: 0;
+}
+
+#regaloUnicoFields #couponMensaje {
+    width: 100%;
+    padding: 14px 16px;
+    box-sizing: border-box;
+    min-height: 80px;
+}
+
+/* Eliminar márgenes laterales del select */
+#couponProducto option {
+    padding: 10px;
+}
