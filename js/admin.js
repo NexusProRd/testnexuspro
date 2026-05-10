@@ -405,6 +405,23 @@ window.onload = async () => {
     }
     
     var key = identifier.toLowerCase().trim();
+
+    function clearStoreSessionIfChanged(currentKey) {
+        var prevKey = localStorage.getItem('nx_current_shop_key') || '';
+        if (prevKey && prevKey !== currentKey) {
+            localStorage.removeItem('nexus_admin_token');
+            localStorage.removeItem('nx_session');
+            localStorage.removeItem('nx_config');
+            localStorage.removeItem('nx_productos');
+            localStorage.removeItem('nx_cupones');
+            localStorage.removeItem('nx_current_shop_sheetid');
+            localStorage.removeItem('nx_current_shop_token');
+        }
+        localStorage.setItem('nx_current_shop_key', currentKey);
+    }
+
+    // Prioridad absoluta al parámetro ?s=
+    clearStoreSessionIfChanged(key);
     var resolvedShopId = null;
     var motorUrl = MOTOR_FALLBACK;
     
@@ -472,21 +489,35 @@ window.onload = async () => {
                 throw new Error("Respuesta PCC inválida");
             }
 
-            // Filtro estricto por nombre exacto normalizado
+// Filtro estricto por nombre exacto normalizado
+            console.log('>>> Buscando:', key, 'en', clientsRaw.length, 'clientes');
             var matches = clientsRaw.filter(function(c) {
                 return c && c.nombre && c.nombre.toLowerCase().trim() === key;
             });
+            console.log('>>> Coincidencias encontradas:', matches.length, matches.map(function(m) { return m.nombre; }));
 
             if (matches.length !== 1) {
                 throw new Error("No existe coincidencia exacta para la tienda '" + identifier + "'");
             }
 
             var cliente = matches[0];
-            if (!cliente.sheetId) {
+            var pccPayload = pccData && pccData.data ? pccData.data : pccData;
+            var targetSheetId = cliente.sheetId || pccPayload.sheetId || pccPayload.shopId || '';
+            var targetToken = pccPayload.token || cliente.token || '';
+
+            if (!targetSheetId) {
                 throw new Error("La tienda encontrada no tiene sheetId válido");
             }
 
-            resolvedShopId = cliente.sheetId;
+            resolvedShopId = targetSheetId;
+
+            // Persistencia estricta para próximas peticiones
+            localStorage.setItem('nx_current_shop_sheetid', resolvedShopId);
+            if (targetToken) {
+                localStorage.setItem('nexus_admin_token', targetToken);
+                localStorage.setItem('nx_current_shop_token', targetToken);
+            }
+
             console.log('✅ Tienda Vinculada:', cliente.nombre, 'ID:', resolvedShopId);
         } catch(e) {
             console.log(">>> Error consultando PCC:", e.message);
@@ -511,10 +542,21 @@ window.onload = async () => {
     NEXUS_CONFIG.isReady = true;
     NEXUS_CONFIG.getShopId = function() { return this.shopId; };
     
-    NEXUS_CONFIG.call = async function(action, data = {}) {
+NEXUS_CONFIG.call = async function(action, data = {}) {
         var url = this.API_URL || MOTOR_FALLBACK;
-        var token = localStorage.getItem('nexus_admin_token') || '';
-        var payload = { shopId: this.shopId, token: token, action: action, data: data };
+        var token = localStorage.getItem('nexus_admin_token') || localStorage.getItem('nx_current_shop_token') || '';
+        
+        // FORZAR case original desde localStorage (nunca modificar a minúsculas)
+        var storedSheetId = localStorage.getItem('nx_current_shop_sheetid');
+        var targetSheetId = storedSheetId ? storedSheetId : this.shopId;
+        
+        // Si es diferente, significa que se alteró - restaurar
+        if (storedSheetId && storedSheetId.toLowerCase() !== targetSheetId.toLowerCase()) {
+            targetSheetId = storedSheetId;
+        }
+        
+        console.log('🔗 Conectando a Motor:', targetSheetId);
+        var payload = { shopId: targetSheetId, token: token, action: action, data: data };
         console.log(">>> call payload:", payload);
         
         var response = await fetch(url, {
