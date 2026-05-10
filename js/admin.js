@@ -558,12 +558,12 @@ resolvedShopId = targetSheetId;
     // Configurar NEXUS_CONFIG con el ID resuelto
     NEXUS_CONFIG.shopId = resolvedShopId;
     NEXUS_CONFIG.pccShopId = identifier;
-    NEXUS_CONFIG.API_URL = motorUrl;
+    NEXUS_CONFIG.API_URL = PCC_URL;
     NEXUS_CONFIG.isReady = true;
     NEXUS_CONFIG.getShopId = function() { return this.shopId; };
     
 NEXUS_CONFIG.call = async function(action, data = {}) {
-        var url = this.API_URL || MOTOR_FALLBACK;
+        var url = PCC_URL;
         var token = localStorage.getItem('nexus_admin_token') || localStorage.getItem('nx_current_shop_token') || '';
         
         // FORZAR case original desde localStorage (nunca modificar a minúsculas)
@@ -2478,10 +2478,10 @@ async function saveWizard() {
         btn.disabled = true;
     }
     
-    var url = NEXUS_CONFIG.API_URL;
+    var url = PCC_URL;
     console.log(">>> URL:", url, "shopId:", NEXUS_CONFIG.shopId);
     
-    var payload = { shopId: NEXUS_CONFIG.shopId, action: 'updateConfig', data: { pin: pin, nombre: nombre, eslogan: eslogan, categorias: categorias, wa: wa, sobre: sobre } };
+    var payload = { shopId: NEXUS_CONFIG.shopId, pccShopId: NEXUS_CONFIG.pccShopId, token: localStorage.getItem('nexus_admin_token') || '', action: 'updateConfig', data: { pin: pin, nombre: nombre, eslogan: eslogan, categorias: categorias, wa: wa, sobre: sobre } };
     console.log(">>> Payload:", payload);
     
     try {
