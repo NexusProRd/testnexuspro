@@ -455,12 +455,25 @@ window.onload = async () => {
             console.log(">>> Respuesta PCC:", pccText.substring(0, 200));
 
             var pccData = JSON.parse(pccText);
-            if (!pccData || !Array.isArray(pccData.clients)) {
+
+            // Soporta múltiples contratos de respuesta PCC
+            var clientsRaw = null;
+            if (pccData && Array.isArray(pccData.clients)) {
+                clientsRaw = pccData.clients;
+            } else if (pccData && pccData.data && Array.isArray(pccData.data.clients)) {
+                clientsRaw = pccData.data.clients;
+            } else if (pccData && typeof pccData.clients === 'string') {
+                try { clientsRaw = JSON.parse(pccData.clients); } catch (_) {}
+            } else if (pccData && pccData.data && typeof pccData.data.clients === 'string') {
+                try { clientsRaw = JSON.parse(pccData.data.clients); } catch (_) {}
+            }
+
+            if (!Array.isArray(clientsRaw)) {
                 throw new Error("Respuesta PCC inválida");
             }
 
             // Filtro estricto por nombre exacto normalizado
-            var matches = pccData.clients.filter(function(c) {
+            var matches = clientsRaw.filter(function(c) {
                 return c && c.nombre && c.nombre.toLowerCase().trim() === key;
             });
 
