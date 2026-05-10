@@ -435,10 +435,11 @@ window.onload = async () => {
         console.log(">>> Usando como Sheet ID directo");
         resolvedShopId = identifier;
     }
-    // 3. Consultar al PCC (MasterController)
+// 3. Consultar al PCC (MasterController)
     else {
         // Prioridad absoluta de URL y limpieza de arrastre de sesión
         resolvedShopId = null;
+        motorUrl = MOTOR_FALLBACK;
         NEXUS_CONFIG.shopId = '';
 
         console.log(">>> Consultando al PCC para:", key);
@@ -509,7 +510,26 @@ window.onload = async () => {
                 throw new Error("La tienda encontrada no tiene sheetId válido");
             }
 
-            resolvedShopId = targetSheetId;
+resolvedShopId = targetSheetId;
+
+            // Obtener motor específico del cliente si está disponible
+            if (cliente.motor) {
+                try {
+                    var motorPayload = { action: 'obtenerMotorPorNombre', nombre: cliente.motor };
+                    var motorResponse = await fetch(PCC_URL, {
+                        method: "POST",
+                        body: JSON.stringify(motorPayload),
+                        redirect: "follow"
+                    });
+                    var motorData = JSON.parse(await motorResponse.text());
+                    if (motorData && motorData.success && motorData.url) {
+                        motorUrl = motorData.url;
+                        console.log('>>> Motor específico del cliente:', motorUrl);
+                    }
+                } catch (e) {
+                    console.log('>>> Error obteniendo motor específico:', e.message);
+                }
+            }
 
             // Persistencia estricta para próximas peticiones
             localStorage.setItem('nx_current_shop_sheetid', resolvedShopId);
@@ -518,7 +538,7 @@ window.onload = async () => {
                 localStorage.setItem('nx_current_shop_token', targetToken);
             }
 
-            console.log('✅ Tienda Vinculada:', cliente.nombre, 'ID:', resolvedShopId);
+            console.log('✅ Tienda Vinculada:', cliente.nombre, 'ID:', resolvedShopId, 'Motor:', motorUrl);
         } catch(e) {
             console.log(">>> Error consultando PCC:", e.message);
             resolvedShopId = null;
