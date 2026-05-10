@@ -1367,6 +1367,7 @@ body {
     width: 100%;
     padding: 14px 16px;
     box-sizing: border-box;
+    margin-bottom: 18px;
 }
 
 #regaloUnicoFields #couponProducto {
@@ -1376,6 +1377,7 @@ body {
     box-sizing: border-box;
     margin-left: 0;
     margin-right: 0;
+    margin-bottom: 18px;
 }
 
 #regaloUnicoFields #productoSeleccionado {
@@ -1383,6 +1385,7 @@ body {
     box-sizing: border-box;
     margin-left: 0;
     margin-right: 0;
+    margin-bottom: 18px;
 }
 
 #regaloUnicoFields #couponMensaje {
@@ -1390,6 +1393,7 @@ body {
     padding: 14px 16px;
     box-sizing: border-box;
     min-height: 80px;
+    margin-bottom: 18px;
 }
 
 /* Eliminar márgenes laterales del select */

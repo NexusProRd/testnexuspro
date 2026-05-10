@@ -236,10 +236,13 @@ const NEXUS_CONFIG = {
             return Promise.resolve({ success: false, message: "Tienda no inicializada" });
         }
 
+        var storedToken = localStorage.getItem('nexus_admin_token') || localStorage.getItem('nx_current_shop_token') || '';
+
         var payload = {
             action: action,
             shopId: self.getShopId(),
             pccShopId: self.pccShopId || self.getShopId(),
+            token: storedToken,
             pin: self.getPin(),
             domain: window.location.host,
             data: data || {}

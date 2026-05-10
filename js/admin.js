@@ -555,9 +555,16 @@ NEXUS_CONFIG.call = async function(action, data = {}) {
             targetSheetId = storedSheetId;
         }
         
-        console.log('🔗 Conectando a Motor:', targetSheetId);
-        var payload = { shopId: targetSheetId, token: token, action: action, data: data };
-        console.log(">>> call payload:", payload);
+console.log('🔗 Conectando a Motor:', targetSheetId);
+        var payload = { 
+            shopId: targetSheetId, 
+            pccShopId: this.pccShopId || targetSheetId,
+            token: token, 
+            action: action, 
+            domain: window.location.host,
+            data: data 
+        };
+        console.log(">>> call payload:", JSON.stringify(payload));
         
         var response = await fetch(url, {
             method: "POST",
@@ -566,13 +573,24 @@ NEXUS_CONFIG.call = async function(action, data = {}) {
         });
         var result = JSON.parse(await response.text());
         
-        // Validar respuesta de token inválido
-        if (result && result.success === false && result.message && result.message.toLowerCase().includes('token inválido')) {
-            console.log(">>> Token inválido, limpiando y pedindo de nuevo");
+// Validar respuesta de token inválido o requerido
+        var isTokenError = result && result.success === false && (
+            (result.message && result.message.toLowerCase().includes('token inválido')) ||
+            (result.message && result.message.toLowerCase().includes('token requerido')) ||
+            (result.message && result.message.toLowerCase().includes('token_invalid')) ||
+            (result.message && result.message.toLowerCase().includes('token_requerido')) ||
+            result.message === 'TOKEN_INVALIDO' ||
+            result.message === 'TOKEN_REQUERIDO'
+        );
+        
+        if (isTokenError) {
+            console.log(">>> Error de token, limpiando y pedindo de nuevo");
             localStorage.removeItem('nexus_admin_token');
+            localStorage.removeItem('nx_current_shop_token');
             var nuevoToken = await promptForToken();
             if (nuevoToken) {
-                // Reintentar con nuevo token
+                localStorage.setItem('nexus_admin_token', nuevoToken);
+                localStorage.setItem('nx_current_shop_token', nuevoToken);
                 payload.token = nuevoToken;
                 var retryResponse = await fetch(url, {
                     method: "POST",
@@ -581,6 +599,13 @@ NEXUS_CONFIG.call = async function(action, data = {}) {
                 });
                 return JSON.parse(await retryResponse.text());
             }
+        }
+        
+        // Validar error de validación de shopId
+        if (result && result.success === false && result.message && result.message.includes('no coincide')) {
+            console.log(">>> Error de validación de shopId:", result.message);
+            NexusDialog.alert("Error de validación: El ID del Motor no coincide con el ID del Admin.", "Error de Seguridad");
+            return { success: false, message: result.message };
         }
         
         return result;
