@@ -622,9 +622,11 @@ console.log('🔗 Conectando a Motor:', targetSheetId);
         }
         
         // Validar error de validación de shopId
-        if (result && result.success === false && result.message && result.message.includes('no coincide')) {
+        if (result && result.success === false && (result.message === 'ID_MISMATCH' || result.message && result.message.includes('no coincide'))) {
             console.log(">>> Error de validación de shopId:", result.message);
-            NexusDialog.alert("Error de validación: El ID del Motor no coincide con el ID del Admin.", "Error de Seguridad");
+            localStorage.removeItem('nx_current_shop_sheetid');
+            localStorage.removeItem('nx_current_shop_token');
+            NexusDialog.alert("Error de validación: El ID del Motor no coincide con el ID del Admin. Por favor, intenta nuevamente.", "Error de Seguridad");
             return { success: false, message: result.message };
         }
         
